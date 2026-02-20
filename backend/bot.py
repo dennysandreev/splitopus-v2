@@ -305,6 +305,14 @@ def handle_command(chat_id, user_id, user_name, text):
 
     elif cmd == "/menu":
         send_trip_dashboard(chat_id, user_id)
+
+    elif cmd == "/app":
+        markup = {
+            "inline_keyboard": [[
+                {"text": "📱 Открыть Splitopus", "web_app": {"url": "https://splitopus.ru"}}
+            ]]
+        }
+        bot.send_message(chat_id, "Нажми кнопку ниже, чтобы открыть приложение:", reply_markup=markup)
         
     elif cmd == "/setrate":
         tid = data.get_active_trip_id(uid_str)
