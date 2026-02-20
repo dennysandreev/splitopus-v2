@@ -1,14 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import WebApp from "@twa-dev/sdk";
 import AddExpenseScreen from "./screens/AddExpenseScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
+import { useStore } from "./store/useStore";
 
 type ScreenName = "details" | "add";
 
 function App() {
   const [screen, setScreen] = useState<ScreenName>("details");
-  // TODO: Get this from URL or Telegram WebApp initData
-  // For now, hardcode a trip ID that likely exists (or use 'test-trip')
+  // TODO: Get this from URL start_param
   const [tripId] = useState<string>("test-trip"); 
+  const initUser = useStore((state) => state.initUser);
+
+  useEffect(() => {
+    // Initialize Telegram SDK
+    WebApp.ready();
+    WebApp.expand();
+    // Initialize User
+    initUser();
+  }, [initUser]);
 
   const goToDetails = () => setScreen("details");
   const goToAdd = () => setScreen("add");

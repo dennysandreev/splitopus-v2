@@ -12,8 +12,9 @@ interface AddExpenseScreenProps {
 function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("FOOD"); // Default category
+  const [category, setCategory] = useState("FOOD");
   
+  const user = useStore((state) => state.user);
   const addExpense = useStore((state) => state.addExpense);
   const loading = useStore((state) => state.loading);
 
@@ -26,11 +27,11 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
 
     await addExpense({
       trip_id: tripId,
-      payer_id: "12345", // TODO: Get from Telegram WebApp initData
+      payer_id: user?.id || "unknown",
       amount: normalizedAmount,
       description: description.trim(),
       category: category,
-      split: {}, // TODO: Implement split selection
+      split: {},
     });
     onBack();
   };

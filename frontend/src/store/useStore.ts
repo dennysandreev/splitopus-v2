@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import WebApp from "@twa-dev/sdk";
 
 const API_BASE_URL = "";
 
@@ -33,11 +34,18 @@ export interface AddExpenseInput {
   split: Record<string, number>;
 }
 
+interface AppUser {
+  id: string;
+  firstName: string;
+}
+
 interface StoreState {
   currentTripId: string | null;
   expenses: Expense[];
+  user: AppUser | null;
   loading: boolean;
   error: string | null;
+  initUser: () => void;
   setCurrentTripId: (tripId: string | null) => void;
   fetchExpenses: (tripId: string) => Promise<void>;
   addExpense: (expense: AddExpenseInput) => Promise<void>;
@@ -57,11 +65,38 @@ function mapExpense(dto: ExpenseDto): Expense {
 export const useStore = create<StoreState>((set, get) => ({
   currentTripId: null,
   expenses: [],
+  user: null,
   loading: false,
   error: null,
+
+  initUser: () => {
+    const tgUser = WebApp.initDataUnsafe?.user;
+
+    if (tgUser?.id) {
+      set({
+        user: {
+          id: String(tgUser.id),
+          firstName: tgUser.first_name ?? "Telegram User",
+        },
+      });
+      console.log("User initialized from Telegram:", tgUser);
+      return;
+    }
+
+    // Fallback for development
+    set({
+      user: {
+        id: "12345",
+        firstName: "Dev User",
+      },
+    });
+    console.log("User initialized (Mock)");
+  },
+
   setCurrentTripId: (tripId) => {
     set({ currentTripId: tripId });
   },
+
   fetchExpenses: async (tripId) => {
     set({ loading: true, error: null, currentTripId: tripId });
     try {
