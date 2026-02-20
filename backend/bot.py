@@ -295,7 +295,7 @@ def handle_command(chat_id, user_id, user_name, text):
                 active_trip_info = f"\n\n🔥 Активная поездка: *{t_name}*"
             
         msg = (
-            "🐙 *Привет! Я Splitopus (SQL Edition).*\n\n"
+            "🐙 *Привет! Я Splitopus.*\n\n"
             "Я помогаю вести учет общих расходов в путешествиях и компаниях. "
             "Больше не нужно спорить, кто за что платил — я всё посчитаю сам!\n\n"
             "👇 *Что будем делать?*"
@@ -943,7 +943,7 @@ def handle_callback(chat_id, user_id, message_id, data_str):
     
     if cmd == "SHOW_HELP":
         help_text = (
-            "📖 *Как пользоваться Splitopus (SQL Edition)*\n\n"
+            "📖 *Как пользоваться Splitopus*\n\n"
             "💸 *Добавление трат:*\n"
             "Просто напишите сумму и название в чат.\n"
             "Пример: `500 Обед` или `1200 Такси`.\n"
@@ -965,7 +965,7 @@ def handle_callback(chat_id, user_id, message_id, data_str):
 
 # --- Main Loop ---
 def run():
-    logger.info("Bot started (SQL Edition)...")
+    logger.info("Bot started...")
     offset = None
     while True:
         try:
