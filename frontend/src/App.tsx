@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AddExpenseScreen from "./screens/AddExpenseScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
-import { useStore } from "./store/useStore";
 
 type ScreenName = "details" | "add";
 
