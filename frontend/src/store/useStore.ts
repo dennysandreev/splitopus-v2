@@ -1,125 +1,113 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+
+const API_BASE_URL = "http://localhost:8000";
 
 export interface Expense {
   id: string;
-  title: string;
   amount: number;
+  description: string;
+  category: string;
   payerId: string;
-  date: string;
+  createdAt: string;
 }
 
-export interface Member {
+interface ExpenseDto {
   id: string;
-  name: string;
-}
-
-export interface Group {
-  id: string;
-  title: string;
-  members: Member[];
-  expenses: Expense[];
-}
-
-interface AddExpenseInput {
-  groupId: string;
-  title: string;
   amount: number;
-  payerId: string;
+  description: string;
+  category: string;
+  payer_id: string;
+  created_at: string;
+}
+
+interface GetExpensesResponse {
+  expenses: ExpenseDto[];
+}
+
+export interface AddExpenseInput {
+  trip_id: string;
+  payer_id: string;
+  amount: number;
+  description: string;
+  category: string;
+  split: Record<string, number>;
 }
 
 interface StoreState {
-  groups: Group[];
-  addGroup: (group: Omit<Group, "id" | "expenses"> & { id?: string }) => void;
-  addExpense: (input: AddExpenseInput) => void;
-  seedData: () => void;
+  currentTripId: string | null;
+  expenses: Expense[];
+  loading: boolean;
+  error: string | null;
+  setCurrentTripId: (tripId: string | null) => void;
+  fetchExpenses: (tripId: string) => Promise<void>;
+  addExpense: (expense: AddExpenseInput) => Promise<void>;
 }
 
-const TEST_USER_ID = "user_1";
-
-const defaultMembers: Member[] = [
-  { id: "user_1", name: "Вы" },
-  { id: "user_2", name: "Алексей" },
-];
-
-function createId(prefix: string) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+function mapExpense(dto: ExpenseDto): Expense {
+  return {
+    id: dto.id,
+    amount: dto.amount,
+    description: dto.description,
+    category: dto.category,
+    payerId: dto.payer_id,
+    createdAt: dto.created_at,
+  };
 }
 
-export const useStore = create<StoreState>()(
-  persist(
-    (set, get) => ({
-      groups: [],
-      addGroup: (group) =>
-        set((state) => ({
-          groups: [
-            ...state.groups,
-            {
-              id: group.id ?? createId("group"),
-              title: group.title,
-              members: group.members,
-              expenses: [],
-            },
-          ],
-        })),
-      addExpense: ({ groupId, title, amount, payerId }) =>
-        set((state) => ({
-          groups: state.groups.map((group) => {
-            if (group.id !== groupId) {
-              return group;
-            }
-
-            return {
-              ...group,
-              expenses: [
-                ...group.expenses,
-                {
-                  id: createId("expense"),
-                  title,
-                  amount,
-                  payerId,
-                  date: new Date().toISOString(),
-                },
-              ],
-            };
-          }),
-        })),
-      seedData: () => {
-        if (get().groups.length > 0) {
-          return;
-        }
-
-        set({
-          groups: [
-            {
-              id: "test-trip",
-              title: "Тестовая поездка",
-              members: defaultMembers,
-              expenses: [
-                {
-                  id: "exp_1",
-                  title: "Супермаркет",
-                  amount: 3000,
-                  payerId: TEST_USER_ID,
-                  date: "2026-02-18T09:00:00.000Z",
-                },
-                {
-                  id: "exp_2",
-                  title: "Такси",
-                  amount: 500,
-                  payerId: "user_2",
-                  date: "2026-02-18T14:30:00.000Z",
-                },
-              ],
-            },
-          ],
-        });
-      },
-    }),
-    {
-      name: "splitopus-storage",
-    },
-  ),
-);
-
-export const currentUserId = TEST_USER_ID;
+export const useStore = create<StoreState>((set, get) => ({
+  currentTripId: null,
+  expenses: [],
+  loading: false,
+  error: null,
+  setCurrentTripId: (tripId) => {
+    set({ currentTripId: tripId });
+  },
+  fetchExpenses: async (tripId) => {
+    set({ loading: true, error: null, currentTripId: tripId });
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/expenses/${encodeURIComponent(tripId)}`,
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch expenses: ${response.status}`);
+      }
+      const data = (await response.json()) as GetExpensesResponse;
+      set({
+        expenses: data.expenses.map(mapExpense),
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+  addExpense: async (expenseInput) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/expenses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(expenseInput),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to add expense: ${response.status}`);
+      }
+      const { currentTripId } = get();
+      if (currentTripId && currentTripId === expenseInput.trip_id) {
+        await get().fetchExpenses(currentTripId);
+      } else {
+        set({ loading: false, error: null });
+      }
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+}));

@@ -139,12 +139,17 @@ def get_trip(trip_id):
         expenses.append(exp)
         
     # Получаем заметки
-    notes = conn.execute("SELECT * FROM notes WHERE trip_id = ?", (trip_id,)).fetchall()
+    notes_rows = conn.execute("SELECT * FROM notes WHERE trip_id = ?", (trip_id,)).fetchall()
+    notes = []
+    for row in notes_rows:
+        n = dict(row)
+        n['ts'] = row['created_at'] # Для совместимости
+        notes.append(n)
     
     trip_dict = dict(trip)
     trip_dict['members'] = member_ids
     trip_dict['expenses'] = expenses
-    trip_dict['notes'] = [dict(n) for n in notes]
+    trip_dict['notes'] = notes
     
     conn.close()
     return trip_dict
