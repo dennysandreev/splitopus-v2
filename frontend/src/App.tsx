@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import WebApp from "@twa-dev/sdk";
 import AddExpenseScreen from "./screens/AddExpenseScreen";
+import DebtsScreen from "./screens/DebtsScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
 import GroupsScreen from "./screens/GroupsScreen";
 import { useStore } from "./store/useStore";
 
-type ScreenName = "groups" | "groupDetails" | "addExpense";
+type ScreenName = "groups" | "groupDetails" | "addExpense" | "debts";
 
 function App() {
   const [screen, setScreen] = useState<ScreenName>("groups");
@@ -40,16 +41,27 @@ function App() {
     setScreen("addExpense");
   };
 
+  const goToDebts = () => {
+    setScreen("debts");
+  };
+
   const addExpenseGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
   return (
     <div className="relative min-h-screen bg-slate-50">
       {screen === "groups" ? <GroupsScreen onSelectGroup={openGroupDetails} /> : null}
       {screen === "groupDetails" && selectedGroupId ? (
-        <GroupDetailsScreen tripId={selectedGroupId} onBack={goToGroups} />
+        <GroupDetailsScreen
+          tripId={selectedGroupId}
+          onBack={goToGroups}
+          onOpenDebts={goToDebts}
+        />
       ) : null}
       {screen === "addExpense" ? (
         <AddExpenseScreen tripId={addExpenseGroupId} onBack={goToGroups} />
+      ) : null}
+      {screen === "debts" && selectedGroupId ? (
+        <DebtsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
       ) : null}
 
       {screen === "groups" ? (

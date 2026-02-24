@@ -25,6 +25,22 @@ interface GetExpensesResponse {
   expenses: ExpenseDto[];
 }
 
+export interface DebtTransaction {
+  from: string;
+  to: string;
+  amount: number;
+}
+
+interface DebtTransactionDto {
+  from: string;
+  to: string;
+  amount: number;
+}
+
+interface GetDebtsResponse {
+  debts: DebtTransactionDto[];
+}
+
 export interface AddExpenseInput {
   trip_id: string;
   payer_id: string;
@@ -80,12 +96,14 @@ interface StoreState {
   groups: Trip[];
   currentTripMembers: TripMember[];
   expenses: Expense[];
+  debts: DebtTransaction[];
   user: AppUser | null;
   loading: boolean;
   error: string | null;
   initUser: () => void;
   setCurrentTripId: (tripId: string | null) => void;
   fetchExpenses: (tripId: string) => Promise<void>;
+  fetchDebts: (tripId: string) => Promise<void>;
   addExpense: (expense: AddExpenseInput) => Promise<void>;
   fetchTrips: () => Promise<void>;
   fetchTripMembers: (tripId: string) => Promise<void>;
@@ -119,11 +137,20 @@ function mapTripMember(dto: TripMemberDto): TripMember {
   };
 }
 
+function mapDebt(dto: DebtTransactionDto): DebtTransaction {
+  return {
+    from: dto.from,
+    to: dto.to,
+    amount: dto.amount,
+  };
+}
+
 export const useStore = create<StoreState>((set, get) => ({
   currentTripId: null,
   groups: [],
   currentTripMembers: [],
   expenses: [],
+  debts: [],
   user: null,
   loading: false,
   error: null,
@@ -197,6 +224,32 @@ export const useStore = create<StoreState>((set, get) => ({
       const data = (await response.json()) as GetExpensesResponse;
       set({
         expenses: data.expenses.map(mapExpense),
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
+  fetchDebts: async (tripId) => {
+    set({ loading: true, error: null, currentTripId: tripId });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/debts/${encodeURIComponent(tripId)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch debts: ${response.status}`);
+      }
+
+      const data = (await response.json()) as GetDebtsResponse;
+      set({
+        debts: data.debts.map(mapDebt),
         loading: false,
         error: null,
       });

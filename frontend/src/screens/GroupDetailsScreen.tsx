@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
@@ -6,9 +7,10 @@ import { useStore } from "../store/useStore";
 interface GroupDetailsScreenProps {
   tripId: string;
   onBack: () => void;
+  onOpenDebts: () => void;
 }
 
-function GroupDetailsScreen({ tripId, onBack }: GroupDetailsScreenProps) {
+function GroupDetailsScreen({ tripId, onBack, onOpenDebts }: GroupDetailsScreenProps) {
   const expenses = useStore((state) => state.expenses);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
@@ -27,6 +29,11 @@ function GroupDetailsScreen({ tripId, onBack }: GroupDetailsScreenProps) {
         <Card>
           <p className="text-sm text-slate-500">Всего потрачено в группе</p>
           <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent} ₽</p>
+          <div className="mt-4">
+            <Button onClick={onOpenDebts} variant="secondary">
+              Расчет долгов
+            </Button>
+          </div>
         </Card>
 
         <section className="space-y-3">
