@@ -1,5 +1,5 @@
-import { create } from "zustand";
 import WebApp from "@twa-dev/sdk";
+import { create } from "zustand";
 
 const API_BASE_URL = "";
 
@@ -39,8 +39,46 @@ interface AppUser {
   firstName: string;
 }
 
+export interface Trip {
+  id: string;
+  name: string;
+  code: string;
+  currency: string;
+  rate: number;
+}
+
+export interface TripMember {
+  id: string;
+  name: string;
+}
+
+interface TripDto {
+  id: string;
+  name: string;
+  code: string;
+  currency: string;
+  rate: number;
+  creator_id: string;
+  created_at: string;
+}
+
+interface GetTripsResponse {
+  trips: TripDto[];
+}
+
+interface TripMemberDto {
+  id: string;
+  name: string;
+}
+
+interface GetTripMembersResponse {
+  members: TripMemberDto[];
+}
+
 interface StoreState {
   currentTripId: string | null;
+  groups: Trip[];
+  currentTripMembers: TripMember[];
   expenses: Expense[];
   user: AppUser | null;
   loading: boolean;
@@ -49,6 +87,18 @@ interface StoreState {
   setCurrentTripId: (tripId: string | null) => void;
   fetchExpenses: (tripId: string) => Promise<void>;
   addExpense: (expense: AddExpenseInput) => Promise<void>;
+  fetchTrips: () => Promise<void>;
+  fetchTripMembers: (tripId: string) => Promise<void>;
+}
+
+function mapTrip(dto: TripDto): Trip {
+  return {
+    id: dto.id,
+    name: dto.name,
+    code: dto.code,
+    currency: dto.currency,
+    rate: dto.rate ?? 0,
+  };
 }
 
 function mapExpense(dto: ExpenseDto): Expense {
@@ -62,8 +112,17 @@ function mapExpense(dto: ExpenseDto): Expense {
   };
 }
 
+function mapTripMember(dto: TripMemberDto): TripMember {
+  return {
+    id: String(dto.id),
+    name: dto.name,
+  };
+}
+
 export const useStore = create<StoreState>((set, get) => ({
   currentTripId: null,
+  groups: [],
+  currentTripMembers: [],
   expenses: [],
   user: null,
   loading: false,
@@ -79,33 +138,62 @@ export const useStore = create<StoreState>((set, get) => ({
           firstName: tgUser.first_name ?? "Telegram User",
         },
       });
-      console.log("User initialized from Telegram:", tgUser);
       return;
     }
 
-    // Fallback for development
     set({
       user: {
-        id: "12345",
-        firstName: "Dev User",
+        id: "5976186394",
+        firstName: "Denis (Dev)",
       },
     });
-    console.log("User initialized (Mock)");
   },
 
   setCurrentTripId: (tripId) => {
     set({ currentTripId: tripId });
   },
 
+  fetchTrips: async () => {
+    const { user } = get();
+    if (!user?.id) return;
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/trips/${encodeURIComponent(user.id)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch trips: ${response.status}`);
+      }
+
+      const data = (await response.json()) as GetTripsResponse;
+      set({
+        groups: data.trips.map(mapTrip),
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
   fetchExpenses: async (tripId) => {
     set({ loading: true, error: null, currentTripId: tripId });
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/expenses/${encodeURIComponent(tripId)}`,
       );
+
       if (!response.ok) {
         throw new Error(`Failed to fetch expenses: ${response.status}`);
       }
+
       const data = (await response.json()) as GetExpensesResponse;
       set({
         expenses: data.expenses.map(mapExpense),
@@ -119,8 +207,36 @@ export const useStore = create<StoreState>((set, get) => ({
       });
     }
   },
+
+  fetchTripMembers: async (tripId) => {
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/members/${encodeURIComponent(tripId)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch trip members: ${response.status}`);
+      }
+
+      const data = (await response.json()) as GetTripMembersResponse;
+      set({
+        currentTripMembers: data.members.map(mapTripMember),
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
   addExpense: async (expenseInput) => {
     set({ loading: true, error: null });
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/expenses`, {
         method: "POST",
@@ -129,9 +245,11 @@ export const useStore = create<StoreState>((set, get) => ({
         },
         body: JSON.stringify(expenseInput),
       });
+
       if (!response.ok) {
         throw new Error(`Failed to add expense: ${response.status}`);
       }
+
       const { currentTripId } = get();
       if (currentTripId && currentTripId === expenseInput.trip_id) {
         await get().fetchExpenses(currentTripId);

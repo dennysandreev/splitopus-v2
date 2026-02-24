@@ -15,58 +15,39 @@ function GroupDetailsScreen({ tripId, onBack }: GroupDetailsScreenProps) {
   const fetchExpenses = useStore((state) => state.fetchExpenses);
 
   useEffect(() => {
-    fetchExpenses(tripId);
+    void fetchExpenses(tripId);
   }, [tripId, fetchExpenses]);
 
-  if (loading && expenses.length === 0) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">
-        Загрузка...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <p className="text-red-500 mb-4">{error}</p>
-        <button onClick={() => fetchExpenses(tripId)} className="text-blue-500 underline">
-          Попробовать снова
-        </button>
-      </div>
-    );
-  }
-
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar onBack={onBack} title={`Поездка #${tripId.slice(0, 6)}`} />
-      <main className="space-y-4 p-4 pb-20">
+      <Navbar onBack={onBack} title="Детали поездки" />
+      <main className="space-y-4 p-4">
         <Card>
-          <p className="text-sm text-slate-500">Всего потрачено</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent.toLocaleString()} ₽</p>
+          <p className="text-sm text-slate-500">Всего потрачено в группе</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent} ₽</p>
         </Card>
 
         <section className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
             Последние расходы
           </h2>
-          {expenses.length === 0 ? (
-            <Card>
-              <p className="text-sm text-slate-500 text-center py-4">Расходов пока нет 🍃</p>
+          {loading ? <p className="text-sm text-slate-500">Загрузка...</p> : null}
+          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+          {expenses.map((expense) => (
+            <Card key={expense.id}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-900">{expense.description}</p>
+                <p className="text-sm text-slate-700">{expense.amount} ₽</p>
+              </div>
             </Card>
-          ) : (
-            expenses.map((expense) => (
-              <Card key={expense.id} className="flex justify-between items-center py-3">
-                <div>
-                    <p className="font-medium text-slate-900">{expense.description}</p>
-                    <p className="text-xs text-slate-500">{new Date(Number(expense.createdAt) * 1000).toLocaleDateString()}</p>
-                </div>
-                <p className="font-semibold text-slate-700">-{expense.amount.toLocaleString()} ₽</p>
-              </Card>
-            ))
-          )}
+          ))}
+          {!loading && expenses.length === 0 ? (
+            <Card>
+              <p className="text-sm text-slate-500">Расходов пока нет</p>
+            </Card>
+          ) : null}
         </section>
       </main>
     </div>
