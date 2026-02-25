@@ -168,12 +168,17 @@ export const useStore = create<StoreState>((set, get) => ({
       return;
     }
 
-    set({
-      user: {
-        id: "5976186394",
-        firstName: "Denis (Dev)",
-      },
-    });
+    if (import.meta.env.DEV) {
+      set({
+        user: {
+          id: "5976186394",
+          firstName: "Denis (Dev)",
+        },
+      });
+      return;
+    }
+
+    set({ user: null });
   },
 
   setCurrentTripId: (tripId) => {
