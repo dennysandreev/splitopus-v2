@@ -9,11 +9,15 @@ interface AddExpenseScreenProps {
   onBack: () => void;
 }
 
+type SplitMode = "equal" | "exact";
+
 function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("other");
+  const [splitMode, setSplitMode] = useState<SplitMode>("equal");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
   const user = useStore((state) => state.user);
   const currentTripMembers = useStore((state) => state.currentTripMembers);
   const addExpense = useStore((state) => state.addExpense);
@@ -32,10 +36,18 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   useEffect(() => {
     if (currentTripMembers.length === 0) {
       setSelectedMemberIds([]);
+      setExactAmounts({});
       return;
     }
 
     setSelectedMemberIds(currentTripMembers.map((member) => member.id));
+    setExactAmounts((prev) => {
+      const next: Record<string, string> = {};
+      currentTripMembers.forEach((member) => {
+        next[member.id] = prev[member.id] ?? "";
+      });
+      return next;
+    });
   }, [currentTripMembers]);
 
   const toggleMember = (memberId: string) => {
@@ -44,6 +56,13 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
         ? prev.filter((id) => id !== memberId)
         : [...prev, memberId],
     );
+  };
+
+  const updateExactAmount = (memberId: string, value: string) => {
+    setExactAmounts((prev) => ({
+      ...prev,
+      [memberId]: value,
+    }));
   };
 
   const handleSave = async () => {
@@ -65,15 +84,44 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
       alert("Ошибка: Введите корректную сумму.");
       return;
     }
-    if (selectedMemberIds.length === 0) {
-      alert("Ошибка: Выберите хотя бы одного участника.");
-      return;
-    }
+    let split: Record<string, number> = {};
 
-    const splitAmount = normalizedAmount / selectedMemberIds.length;
-    const split = Object.fromEntries(
-      selectedMemberIds.map((memberId) => [memberId, splitAmount]),
-    );
+    if (splitMode === "equal") {
+      if (selectedMemberIds.length === 0) {
+        alert("Ошибка: Выберите хотя бы одного участника.");
+        return;
+      }
+
+      const splitAmount = normalizedAmount / selectedMemberIds.length;
+      split = Object.fromEntries(
+        selectedMemberIds.map((memberId) => [memberId, splitAmount]),
+      );
+    } else {
+      const exactSplit = Object.fromEntries(
+        currentTripMembers.map((member) => {
+          const value = Number(exactAmounts[member.id] ?? "");
+          return [member.id, Number.isFinite(value) && value > 0 ? value : 0];
+        }),
+      ) as Record<string, number>;
+
+      const exactTotal = Object.values(exactSplit).reduce((sum, value) => sum + value, 0);
+      const roundedExactTotal = Number(exactTotal.toFixed(2));
+      const roundedTarget = Number(normalizedAmount.toFixed(2));
+
+      if (roundedExactTotal !== roundedTarget) {
+        alert("Ошибка: Сумма точных долей должна совпадать с общей суммой.");
+        return;
+      }
+
+      split = Object.fromEntries(
+        Object.entries(exactSplit).filter(([, value]) => value > 0),
+      );
+
+      if (Object.keys(split).length === 0) {
+        alert("Ошибка: Укажите хотя бы одну долю.");
+        return;
+      }
+    }
 
     await addExpense({
       trip_id: tripId,
@@ -142,23 +190,86 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
             {error && currentTripMembers.length === 0 ? (
               <p className="text-sm text-rose-600">{error}</p>
             ) : null}
-            <div className="space-y-2">
-              {currentTripMembers.map((member) => (
-                <label
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
-                  htmlFor={`member-${member.id}`}
-                  key={member.id}
-                >
-                  <input
-                    checked={selectedMemberIds.includes(member.id)}
-                    id={`member-${member.id}`}
-                    onChange={() => toggleMember(member.id)}
-                    type="checkbox"
-                  />
-                  <span className="text-sm text-slate-900">{member.name}</span>
-                </label>
-              ))}
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+              <button
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  splitMode === "equal"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600"
+                }`}
+                onClick={() => setSplitMode("equal")}
+                type="button"
+              >
+                Поровну
+              </button>
+              <button
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  splitMode === "exact"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600"
+                }`}
+                onClick={() => setSplitMode("exact")}
+                type="button"
+              >
+                Точная сумма
+              </button>
             </div>
+            <div className="space-y-2">
+              {splitMode === "equal"
+                ? currentTripMembers.map((member) => (
+                    <label
+                      className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
+                      htmlFor={`member-${member.id}`}
+                      key={member.id}
+                    >
+                      <input
+                        checked={selectedMemberIds.includes(member.id)}
+                        id={`member-${member.id}`}
+                        onChange={() => toggleMember(member.id)}
+                        type="checkbox"
+                      />
+                      <span className="text-sm text-slate-900">{member.name}</span>
+                    </label>
+                  ))
+                : currentTripMembers.map((member) => (
+                    <div
+                      className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
+                      key={member.id}
+                    >
+                      <span className="min-w-0 flex-1 text-sm text-slate-900">
+                        {member.name}
+                      </span>
+                      <input
+                        className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-sm text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                        onChange={(event) =>
+                          updateExactAmount(member.id, event.target.value)
+                        }
+                        placeholder="0"
+                        step="0.01"
+                        type="number"
+                        value={exactAmounts[member.id] ?? ""}
+                      />
+                    </div>
+                  ))}
+            </div>
+            {splitMode === "equal" && selectedMemberIds.length > 0 && amount ? (
+              <p className="text-xs text-slate-500">
+                По {(
+                  Number(amount) / selectedMemberIds.length || 0
+                ).toFixed(2)}{" "}
+                каждому
+              </p>
+            ) : null}
+            {splitMode === "exact" ? (
+              <p className="text-xs text-slate-500">
+                Сумма долей:{" "}
+                {Object.values(exactAmounts).reduce((sum, value) => {
+                  const num = Number(value);
+                  return sum + (Number.isFinite(num) ? num : 0);
+                }, 0).toFixed(2)}{" "}
+                / {Number(amount || 0).toFixed(2)}
+              </p>
+            ) : null}
           </div>
 
           <Button disabled={loading} fullWidth onClick={handleSave}>

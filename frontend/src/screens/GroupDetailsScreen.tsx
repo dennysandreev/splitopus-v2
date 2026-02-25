@@ -8,9 +8,15 @@ interface GroupDetailsScreenProps {
   tripId: string;
   onBack: () => void;
   onOpenDebts: () => void;
+  onOpenAddExpense: () => void;
 }
 
-function GroupDetailsScreen({ tripId, onBack, onOpenDebts }: GroupDetailsScreenProps) {
+function GroupDetailsScreen({
+  tripId,
+  onBack,
+  onOpenDebts,
+  onOpenAddExpense,
+}: GroupDetailsScreenProps) {
   const expenses = useStore((state) => state.expenses);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
@@ -57,6 +63,15 @@ function GroupDetailsScreen({ tripId, onBack, onOpenDebts }: GroupDetailsScreenP
           ) : null}
         </section>
       </main>
+
+      <button
+        aria-label="Добавить расход"
+        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-3xl leading-none text-white shadow-lg hover:bg-slate-800"
+        onClick={onOpenAddExpense}
+        type="button"
+      >
+        +
+      </button>
     </div>
   );
 }

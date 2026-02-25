@@ -55,24 +55,17 @@ function App() {
           tripId={selectedGroupId}
           onBack={goToGroups}
           onOpenDebts={goToDebts}
+          onOpenAddExpense={goToAddExpense}
         />
       ) : null}
       {screen === "addExpense" ? (
-        <AddExpenseScreen tripId={addExpenseGroupId} onBack={goToGroups} />
+        <AddExpenseScreen
+          tripId={addExpenseGroupId}
+          onBack={() => setScreen(selectedGroupId ? "groupDetails" : "groups")}
+        />
       ) : null}
       {screen === "debts" && selectedGroupId ? (
         <DebtsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
-      ) : null}
-
-      {screen === "groups" ? (
-        <button
-          aria-label="Добавить расход"
-          className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-3xl leading-none text-white shadow-lg hover:bg-slate-800"
-          onClick={goToAddExpense}
-          type="button"
-        >
-          +
-        </button>
       ) : null}
     </div>
   );
