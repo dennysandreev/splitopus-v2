@@ -64,8 +64,8 @@ class TelegramClient:
         return None
 
     # --- Public API Methods ---
-    def get_updates(self, offset=None, timeout=30):
-        params = {"timeout": timeout, "offset": offset, "allowed_updates": ["message", "callback_query"]}
+    def get_updates(self, offset=None, timeout=60):
+        params = {"timeout": timeout, "offset": offset}
         # Long polling timeout needs to be greater than request timeout
         # So we increase request timeout inside _request if needed, but here we just pass params
         try:

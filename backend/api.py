@@ -4,8 +4,14 @@ from pydantic import BaseModel
 import sqlite3
 import json
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from datetime import datetime
+import os
+import requests
+from src import logic
+# Import handlers for webhook processing
+# Note: handlers must be available in python path. Since it is in src/, we import from src
+from src import handlers
 
 # --- Config ---
 DB_PATH = "data/splitopus.db"
@@ -16,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# CORS (Allow Frontend to call Backend)
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: Restrict in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,7 +38,7 @@ class ExpenseCreate(BaseModel):
     amount: float
     description: str
     category: str
-    split: Dict[str, float]  # user_id -> amount
+    split: Dict[str, float]
 
 # --- DB Helper ---
 def get_db():
@@ -40,21 +46,69 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+# --- Notification Logic ---
+def send_telegram_msg(chat_id, text):
+    token = os.getenv('BOT_TOKEN')
+    if not token: return
+    try:
+        url = f'https://api.telegram.org/bot{token}/sendMessage'
+        requests.post(url, json={'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'})
+    except Exception as e:
+        logger.error(f'Failed to send TG message: {e}')
+
+def notify_new_expense(trip_id, payer_id, amount, desc):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Get Trip & Currency
+        cursor.execute("SELECT name, currency FROM trips WHERE id = ?", (trip_id,))
+        trip_row = cursor.fetchone()
+        if not trip_row: return
+        trip_name = trip_row['name']
+        curr = trip_row['currency']
+        
+        # Get Payer Name
+        cursor.execute("SELECT name FROM users WHERE id = ?", (payer_id,))
+        payer_row = cursor.fetchone()
+        payer_name = payer_row['name'] if payer_row else 'Кто-то'
+        
+        # Get Members
+        cursor.execute("SELECT user_id FROM trip_members WHERE trip_id = ?", (trip_id,))
+        members = [r['user_id'] for r in cursor.fetchall()]
+        
+        msg = f"💸 *{trip_name}*: Новый расход (через App)\n👤 *{payer_name}* заплатил *{amount:,.0f} {curr}*\n📝 {desc}"
+        
+        for m_id in members:
+            if str(m_id) != str(payer_id):
+                send_telegram_msg(m_id, msg)
+                
+    except Exception as e:
+        logger.error(f'Notification error: {e}')
+    finally:
+        conn.close()
+
 # --- API Endpoints ---
 
 @app.get("/")
 def health_check():
     return {"status": "ok", "service": "splitopus-api"}
 
+@app.post("/api/webhook")
+async def telegram_webhook(update: Dict[str, Any] = Body(...)):
+    """Handle Telegram Webhook updates."""
+    try:
+        handlers.process_update(update)
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}")
+    return {"ok": True}
+
 @app.get("/api/trips/{user_id}")
 def get_user_trips(user_id: str):
-    """Get all trips a user belongs to."""
     conn = get_db()
     cursor = conn.cursor()
     try:
-        # Get trips where user is a member
         query = """
-        SELECT t.id, t.code, t.name, t.currency
+        SELECT t.id, t.code, t.name, t.currency, t.rate
         FROM trips t
         JOIN trip_members tm ON t.id = tm.trip_id
         WHERE tm.user_id = ?
@@ -71,7 +125,6 @@ def get_user_trips(user_id: str):
 
 @app.get("/api/expenses/{trip_id}")
 def get_trip_expenses(trip_id: str):
-    """Get all expenses for a specific trip."""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -103,7 +156,6 @@ def get_trip_expenses(trip_id: str):
 
 @app.post("/api/expenses")
 def create_expense(expense: ExpenseCreate):
-    """Add a new expense."""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -126,7 +178,9 @@ def create_expense(expense: ExpenseCreate):
         conn.commit()
         new_id = cursor.lastrowid
         
-        logger.info(f"New expense created: ID={new_id}, Trip={expense.trip_id}, Amount={expense.amount}")
+        logger.info(f"New expense created: ID={new_id}")
+        
+        notify_new_expense(expense.trip_id, expense.payer_id, expense.amount, expense.description)
         
         return {"status": "success", "id": new_id}
     except Exception as e:
@@ -138,7 +192,6 @@ def create_expense(expense: ExpenseCreate):
 
 @app.get("/api/members/{trip_id}")
 def get_trip_members(trip_id: str):
-    """Get all members of a trip."""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -153,6 +206,58 @@ def get_trip_members(trip_id: str):
         return {"members": members}
     except Exception as e:
         logger.error(f"Error fetching members: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/debts/{trip_id}")
+def get_trip_debts(trip_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+        SELECT u.id, u.name 
+        FROM users u 
+        JOIN trip_members tm ON u.id = tm.user_id 
+        WHERE tm.trip_id = ?
+        """, (trip_id,))
+        members_rows = cursor.fetchall()
+        
+        members = [row["id"] for row in members_rows]
+        user_names = {row["id"]: row["name"] for row in members_rows}
+        
+        cursor.execute("""
+        SELECT payer_id, amount, category, created_at, split_json 
+        FROM expenses 
+        WHERE trip_id = ?
+        """, (trip_id,))
+        expenses_rows = cursor.fetchall()
+        
+        expenses = []
+        for row in expenses_rows:
+            exp = dict(row)
+            try:
+                exp["split"] = json.loads(row["split_json"]) if row["split_json"] else {}
+            except:
+                exp["split"] = {}
+            exp["ts"] = row["created_at"]
+            expenses.append(exp)
+            
+        trip = {
+            'members': members,
+            'expenses': expenses
+        }
+        
+        balances, total_spent, paid_by = logic.calculate_balance(trip, link_map={})
+        transactions = logic.simplify_debts(balances, user_names)
+        
+        return {
+            "debts": transactions,
+            "balances": balances
+        }
+        
+    except Exception as e:
+        logger.error(f"Error calculating debts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

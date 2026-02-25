@@ -972,44 +972,28 @@ def handle_callback(chat_id, user_id, message_id, data_str):
         return
 
 # --- Main Loop ---
-def run():
-    logger.info("Bot started...")
-    offset = None
-    while True:
-        try:
-            updates = bot.get_updates(offset=offset, timeout=30); 
-            for u in updates:
-                offset = u['update_id'] + 1
-                
-                if 'message' in u:
-                    msg = u['message']
-                    chat_id = msg['chat']['id']
-                    user = msg.get('from', {})
-                    user_id = user.get('id')
-                    user_name = user.get('first_name', 'User')
-                    text = msg.get('text', '')
-                    
-                    logger.info(f"MSG: {text}"); if text.startswith('/'):
-                        handle_command(chat_id, user_id, user_name, text)
-                    else:
-                        handle_text(chat_id, user_id, user_name, text)
-                        
-                elif 'callback_query' in u:
-                    cb = u['callback_query']
-                    chat_id = cb['message']['chat']['id']
-                    user_id = cb['from']['id']
-                    msg_id = cb['message']['message_id']
-                    data_str = cb['data']
-                    
-                    handle_callback(chat_id, user_id, msg_id, data_str)
-                    bot.answer_callback_query(cb['id'])
-                    
-        except KeyboardInterrupt:
-            logger.info("Stopping bot...")
-            break
-        except Exception as e:
-            logger.error(f"Main loop error: {e}", exc_info=True)
-            time.sleep(5)
 
-if __name__ == "__main__":
-    run()
+def process_update(u):
+    if 'message' in u:
+        msg = u['message']
+        chat_id = msg['chat']['id']
+        user = msg.get('from', {})
+        user_id = user.get('id')
+        user_name = user.get('first_name', 'User')
+        text = msg.get('text', '')
+        
+        logger.info(f"WEBHOOK MSG: {text}")
+        if text.startswith('/'):
+            handle_command(chat_id, user_id, user_name, text)
+        else:
+            handle_text(chat_id, user_id, user_name, text)
+            
+    elif 'callback_query' in u:
+        cb = u['callback_query']
+        chat_id = cb['message']['chat']['id']
+        user_id = cb['from']['id']
+        msg_id = cb['message']['message_id']
+        data_str = cb['data']
+        
+        handle_callback(chat_id, user_id, msg_id, data_str)
+        bot.answer_callback_query(cb['id'])
