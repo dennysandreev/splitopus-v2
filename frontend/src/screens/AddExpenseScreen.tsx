@@ -10,11 +10,21 @@ interface AddExpenseScreenProps {
 }
 
 type SplitMode = "equal" | "exact";
+type ExpenseCategoryCode = "FOOD" | "TRANSPORT" | "HOME" | "SHOP" | "FUN" | "OTHER";
+
+const CATEGORY_OPTIONS: Array<{ code: ExpenseCategoryCode; label: string }> = [
+  { code: "FOOD", label: "🍔 Еда" },
+  { code: "TRANSPORT", label: "🚕 Транспорт" },
+  { code: "HOME", label: "🏠 Жилье" },
+  { code: "SHOP", label: "🛒 Магазин" },
+  { code: "FUN", label: "🎉 Развлечения" },
+  { code: "OTHER", label: "📦 Другое" },
+];
 
 function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("other");
+  const [category, setCategory] = useState<ExpenseCategoryCode>("OTHER");
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
@@ -128,7 +138,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
       payer_id: String(user.id),
       amount: normalizedAmount,
       description: description.trim(),
-      category: category.trim() || "other",
+      category,
       split,
     });
 
@@ -172,14 +182,18 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
             <label className="text-sm text-slate-600" htmlFor="category">
               Категория
             </label>
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            <select
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
               id="category"
-              onChange={(event) => setCategory(event.target.value)}
-              placeholder="Например, food"
-              type="text"
+              onChange={(event) => setCategory(event.target.value as ExpenseCategoryCode)}
               value={category}
-            />
+            >
+              {CATEGORY_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">

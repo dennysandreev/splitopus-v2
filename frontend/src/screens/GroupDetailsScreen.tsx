@@ -25,6 +25,7 @@ function GroupDetailsScreen({
 }: GroupDetailsScreenProps) {
   const expenses = useStore((state) => state.expenses);
   const balances = useStore((state) => state.balances);
+  const groups = useStore((state) => state.groups);
   const user = useStore((state) => state.user);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
@@ -37,6 +38,8 @@ function GroupDetailsScreen({
   }, [tripId, fetchExpenses, fetchDebts]);
 
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const trip = groups.find((group) => group.id === tripId);
+  const currency = trip?.currency ?? "₽";
   const myBalance = user ? balances?.[String(user.id)] || 0 : 0;
 
   useEffect(() => {
@@ -51,7 +54,9 @@ function GroupDetailsScreen({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-slate-500">Всего</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent} ₽</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">
+                {totalSpent} {currency}
+              </p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Мой баланс</p>
@@ -61,13 +66,13 @@ function GroupDetailsScreen({
                 }`}
               >
                 {myBalance > 0 ? "+" : ""}
-                {myBalance} ₽
+                {myBalance} {currency}
               </p>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={onOpenDebts} variant="secondary">
-              Расчет долгов
+              Баланс поездки
             </Button>
             <Button onClick={onOpenStats} variant="secondary">
               Статистика 📊
@@ -99,7 +104,9 @@ function GroupDetailsScreen({
                     </p>
                     <p className="text-xs text-slate-500">{expense.category}</p>
                   </div>
-                  <p className="text-sm text-slate-700">{expense.amount} ₽</p>
+                  <p className="text-sm text-slate-700">
+                    {expense.amount} {currency}
+                  </p>
                 </div>
               </Card>
             </button>
