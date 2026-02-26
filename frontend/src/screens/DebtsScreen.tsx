@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
@@ -10,10 +11,12 @@ interface DebtsScreenProps {
 
 function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
   const debts = useStore((state) => state.debts);
+  const balances = useStore((state) => state.balances);
   const groups = useStore((state) => state.groups);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
   const fetchDebts = useStore((state) => state.fetchDebts);
+  const notifyDebts = useStore((state) => state.notifyDebts);
 
   useEffect(() => {
     void fetchDebts(tripId);
@@ -22,6 +25,10 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
   const trip = groups.find((group) => group.id === tripId);
   const currency = trip?.currency ?? "₽";
 
+  const handleNotify = async () => {
+    await notifyDebts(tripId);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar onBack={onBack} title="Расчет долгов" />
@@ -29,26 +36,65 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
         {loading ? <p className="text-sm text-slate-500">Загрузка расчетов...</p> : null}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
-        {!loading && debts.length === 0 ? (
-          <Card>
-            <p className="text-center text-base font-medium text-emerald-600">
-              Все в расчете! 🎉
-            </p>
-          </Card>
-        ) : null}
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
+              Баланс участников
+            </h2>
+            <Button onClick={handleNotify} variant="secondary">
+              🔔 Отправить расчет всем
+            </Button>
+          </div>
 
-        {debts.map((debt, index) => (
-          <Card key={`${debt.from}-${debt.to}-${index}`}>
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-medium text-slate-900">
-                {debt.from} {"\u2192"} {debt.to}
-              </p>
-              <p className="text-lg font-semibold text-slate-900">
-                {debt.amount} {currency}
-              </p>
+          {balances.length > 0 ? (
+            <div className="space-y-2">
+              {balances.map((balance, index) => (
+                <div
+                  className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
+                  key={`${balance.userId ?? balance.name}-${index}`}
+                >
+                  <p className="text-sm font-medium text-slate-900">{balance.name}</p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      balance.amount >= 0 ? "text-emerald-600" : "text-rose-600"
+                    }`}
+                  >
+                    {balance.amount > 0 ? "+" : ""}
+                    {balance.amount} {currency}
+                  </p>
+                </div>
+              ))}
             </div>
-          </Card>
-        ))}
+          ) : !loading ? (
+            <p className="text-sm text-slate-500">Баланс пока недоступен</p>
+          ) : null}
+        </Card>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
+            Расчеты
+          </h2>
+          {!loading && debts.length === 0 ? (
+            <Card>
+              <p className="text-center text-base font-medium text-emerald-600">
+                Все в расчете! 🎉
+              </p>
+            </Card>
+          ) : null}
+
+          {debts.map((debt, index) => (
+            <Card key={`${debt.from}-${debt.to}-${index}`}>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-medium text-slate-900">
+                  {debt.from} {"\u2192"} {debt.to}
+                </p>
+                <p className="text-lg font-semibold text-slate-900">
+                  {debt.amount} {currency}
+                </p>
+              </div>
+            </Card>
+          ))}
+        </section>
       </main>
     </div>
   );

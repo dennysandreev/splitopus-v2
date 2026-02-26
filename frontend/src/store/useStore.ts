@@ -9,7 +9,10 @@ export interface Expense {
   description: string;
   category: string;
   payerId: string;
+  payerName?: string;
   createdAt: string;
+  split?: Record<string, number>;
+  splitDetails?: Array<{ userId?: string; name: string; amount: number }>;
 }
 
 interface ExpenseDto {
@@ -18,7 +21,11 @@ interface ExpenseDto {
   description: string;
   category: string;
   payer_id: string;
+  payer_name?: string;
   created_at: string;
+  split?: Record<string, number>;
+  split_details?: Array<{ user_id?: string; name?: string; amount: number }>;
+  participants?: Array<{ user_id?: string; name?: string; amount?: number; share?: number }>;
 }
 
 interface GetExpensesResponse {
@@ -63,6 +70,7 @@ interface StatsCategoryDto {
 interface GetStatsResponse {
   by_category?: Record<string, number>;
   my_by_category?: Record<string, number>;
+  my_category?: Record<string, number>;
   my?: StatsCategoryDto[];
   mine?: StatsCategoryDto[];
   overall?: StatsCategoryDto[];
@@ -75,6 +83,12 @@ export interface DebtTransaction {
   amount: number;
 }
 
+export interface ParticipantBalance {
+  userId?: string;
+  name: string;
+  amount: number;
+}
+
 interface DebtTransactionDto {
   from: string;
   to: string;
@@ -82,6 +96,9 @@ interface DebtTransactionDto {
 }
 
 interface GetDebtsResponse {
+  balances?: Record<string, number>;
+  balances_list?: Array<{ user_id?: string; name?: string; amount: number }>;
+  participants?: Array<{ user_id?: string; name?: string; balance: number }>;
   debts: DebtTransactionDto[];
 }
 
@@ -141,6 +158,7 @@ interface StoreState {
   currentTripMembers: TripMember[];
   expenses: Expense[];
   debts: DebtTransaction[];
+  balances: ParticipantBalance[];
   notes: Note[];
   stats: Stats | null;
   user: AppUser | null;
@@ -150,6 +168,7 @@ interface StoreState {
   setCurrentTripId: (tripId: string | null) => void;
   fetchExpenses: (tripId: string) => Promise<void>;
   fetchDebts: (tripId: string) => Promise<void>;
+  notifyDebts: (tripId: string) => Promise<void>;
   addExpense: (expense: AddExpenseInput) => Promise<void>;
   fetchNotes: (tripId: string) => Promise<void>;
   addNote: (tripId: string, text: string) => Promise<void>;
@@ -169,13 +188,28 @@ function mapTrip(dto: TripDto): Trip {
 }
 
 function mapExpense(dto: ExpenseDto): Expense {
+  const splitDetails =
+    dto.split_details?.map((item) => ({
+      userId: item.user_id ? String(item.user_id) : undefined,
+      name: item.name ?? "Участник",
+      amount: item.amount,
+    })) ??
+    dto.participants?.map((item) => ({
+      userId: item.user_id ? String(item.user_id) : undefined,
+      name: item.name ?? "Участник",
+      amount: item.amount ?? item.share ?? 0,
+    }));
+
   return {
     id: dto.id,
     amount: dto.amount,
     description: dto.description,
     category: dto.category,
     payerId: dto.payer_id,
+    payerName: dto.payer_name,
     createdAt: dto.created_at,
+    split: dto.split,
+    splitDetails,
   };
 }
 
@@ -192,6 +226,33 @@ function mapDebt(dto: DebtTransactionDto): DebtTransaction {
     to: dto.to,
     amount: dto.amount,
   };
+}
+
+function mapBalances(data: GetDebtsResponse): ParticipantBalance[] {
+  if (Array.isArray(data.balances_list)) {
+    return data.balances_list.map((item) => ({
+      userId: item.user_id ? String(item.user_id) : undefined,
+      name: item.name ?? "Участник",
+      amount: item.amount,
+    }));
+  }
+
+  if (Array.isArray(data.participants)) {
+    return data.participants.map((item) => ({
+      userId: item.user_id ? String(item.user_id) : undefined,
+      name: item.name ?? "Участник",
+      amount: item.balance,
+    }));
+  }
+
+  if (data.balances) {
+    return Object.entries(data.balances).map(([name, amount]) => ({
+      name,
+      amount,
+    }));
+  }
+
+  return [];
 }
 
 function mapNote(dto: NoteDto): Note {
@@ -227,6 +288,7 @@ export const useStore = create<StoreState>((set, get) => ({
   currentTripMembers: [],
   expenses: [],
   debts: [],
+  balances: [],
   notes: [],
   stats: null,
   user: null,
@@ -333,9 +395,32 @@ export const useStore = create<StoreState>((set, get) => ({
       const data = (await response.json()) as GetDebtsResponse;
       set({
         debts: data.debts.map(mapDebt),
+        balances: mapBalances(data),
         loading: false,
         error: null,
       });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
+  notifyDebts: async (tripId) => {
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/debts/${encodeURIComponent(tripId)}/notify`,
+        { method: "POST" },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to notify debts: ${response.status}`);
+      }
+
+      set({ loading: false, error: null });
     } catch (error) {
       set({
         loading: false,
@@ -413,7 +498,7 @@ export const useStore = create<StoreState>((set, get) => ({
       }
 
       const data = (await response.json()) as GetStatsResponse;
-      const myFromRecord = mapCategoryRecord(data.my_by_category);
+      const myFromRecord = mapCategoryRecord(data.my_category ?? data.my_by_category);
       const overallFromRecord = mapCategoryRecord(data.by_category);
 
       set({

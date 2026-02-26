@@ -11,6 +11,7 @@ interface GroupDetailsScreenProps {
   onOpenStats: () => void;
   onOpenNotes: () => void;
   onOpenAddExpense: () => void;
+  onOpenExpense: (expenseId: string) => void;
 }
 
 function GroupDetailsScreen({
@@ -20,25 +21,49 @@ function GroupDetailsScreen({
   onOpenStats,
   onOpenNotes,
   onOpenAddExpense,
+  onOpenExpense,
 }: GroupDetailsScreenProps) {
   const expenses = useStore((state) => state.expenses);
+  const balances = useStore((state) => state.balances);
+  const user = useStore((state) => state.user);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
   const fetchExpenses = useStore((state) => state.fetchExpenses);
+  const fetchDebts = useStore((state) => state.fetchDebts);
 
   useEffect(() => {
     void fetchExpenses(tripId);
-  }, [tripId, fetchExpenses]);
+    void fetchDebts(tripId);
+  }, [tripId, fetchExpenses, fetchDebts]);
 
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const myBalance =
+    balances.find((item) => item.userId && item.userId === String(user?.id)) ??
+    balances.find((item) => item.name === user?.firstName) ??
+    null;
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar onBack={onBack} title="Детали поездки" />
       <main className="space-y-4 p-4">
         <Card>
-          <p className="text-sm text-slate-500">Всего потрачено в группе</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent} ₽</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-slate-500">Всего</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent} ₽</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Мой баланс</p>
+              <p
+                className={`mt-1 text-2xl font-semibold ${
+                  (myBalance?.amount ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"
+                }`}
+              >
+                {(myBalance?.amount ?? 0) > 0 ? "+" : ""}
+                {myBalance?.amount ?? 0} ₽
+              </p>
+            </div>
+          </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={onOpenDebts} variant="secondary">
               Расчет долгов
@@ -59,12 +84,24 @@ function GroupDetailsScreen({
           {loading ? <p className="text-sm text-slate-500">Загрузка...</p> : null}
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
           {expenses.map((expense) => (
-            <Card key={expense.id}>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-900">{expense.description}</p>
-                <p className="text-sm text-slate-700">{expense.amount} ₽</p>
-              </div>
-            </Card>
+            <button
+              className="w-full text-left"
+              key={expense.id}
+              onClick={() => onOpenExpense(expense.id)}
+              type="button"
+            >
+              <Card className="transition-colors hover:bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">
+                      {expense.description}
+                    </p>
+                    <p className="text-xs text-slate-500">{expense.category}</p>
+                  </div>
+                  <p className="text-sm text-slate-700">{expense.amount} ₽</p>
+                </div>
+              </Card>
+            </button>
           ))}
           {!loading && expenses.length === 0 ? (
             <Card>

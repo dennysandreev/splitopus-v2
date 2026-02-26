@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import WebApp from "@twa-dev/sdk";
 import AddExpenseScreen from "./screens/AddExpenseScreen";
 import DebtsScreen from "./screens/DebtsScreen";
+import ExpenseDetailsScreen from "./screens/ExpenseDetailsScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
 import GroupsScreen from "./screens/GroupsScreen";
 import NotesScreen from "./screens/NotesScreen";
@@ -13,12 +14,14 @@ type ScreenName =
   | "groupDetails"
   | "addExpense"
   | "debts"
+  | "expenseDetails"
   | "stats"
   | "notes";
 
 function App() {
   const [screen, setScreen] = useState<ScreenName>("groups");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
   const groups = useStore((state) => state.groups);
   const fetchTrips = useStore((state) => state.fetchTrips);
@@ -54,6 +57,11 @@ function App() {
 
   const goToDebts = () => {
     setScreen("debts");
+  };
+
+  const goToExpenseDetails = (expenseId: string) => {
+    setSelectedExpenseId(expenseId);
+    setScreen("expenseDetails");
   };
 
   const goToStats = () => {
@@ -98,6 +106,7 @@ function App() {
           onOpenStats={goToStats}
           onOpenNotes={goToNotes}
           onOpenAddExpense={goToAddExpense}
+          onOpenExpense={goToExpenseDetails}
         />
       ) : null}
       {screen === "addExpense" ? (
@@ -108,6 +117,12 @@ function App() {
       ) : null}
       {screen === "debts" && selectedGroupId ? (
         <DebtsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+      ) : null}
+      {screen === "expenseDetails" && selectedExpenseId ? (
+        <ExpenseDetailsScreen
+          expenseId={selectedExpenseId}
+          onBack={() => setScreen("groupDetails")}
+        />
       ) : null}
       {screen === "stats" && selectedGroupId ? (
         <StatsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
