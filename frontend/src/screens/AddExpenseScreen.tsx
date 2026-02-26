@@ -145,7 +145,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
               Сумма
             </label>
             <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
               id="amount"
               onChange={(event) => setAmount(event.target.value)}
               placeholder="Например, 1500"
@@ -159,7 +159,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
               Название
             </label>
             <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
               id="description"
               onChange={(event) => setDescription(event.target.value)}
               placeholder="Например, Ужин"
@@ -173,7 +173,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
               Категория
             </label>
             <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
               id="category"
               onChange={(event) => setCategory(event.target.value)}
               placeholder="Например, food"
@@ -240,7 +240,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
                         {member.name}
                       </span>
                       <input
-                        className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-sm text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                        className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-base text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         onChange={(event) =>
                           updateExactAmount(member.id, event.target.value)
                         }

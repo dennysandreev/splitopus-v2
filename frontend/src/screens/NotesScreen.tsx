@@ -35,7 +35,7 @@ function NotesScreen({ tripId, onBack }: NotesScreenProps) {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar onBack={onBack} title="Заметки" />
-      <main className="space-y-4 p-4 pb-28">
+      <main className="space-y-4 p-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         {loading ? <p className="text-sm text-slate-500">Загрузка заметок...</p> : null}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
@@ -55,12 +55,12 @@ function NotesScreen({ tripId, onBack }: NotesScreenProps) {
       </main>
 
       <form
-        className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-4"
+        className="sticky bottom-0 left-0 right-0 border-t border-slate-200 bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
         onSubmit={handleSubmit}
       >
         <div className="mx-auto flex max-w-3xl items-center gap-2">
           <input
-            className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
             onChange={(event) => setText(event.target.value)}
             placeholder="Написать заметку..."
             type="text"
