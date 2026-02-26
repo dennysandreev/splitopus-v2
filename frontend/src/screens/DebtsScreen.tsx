@@ -46,21 +46,21 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
             </Button>
           </div>
 
-          {balances.length > 0 ? (
+          {Object.keys(balances).length > 0 ? (
             <div className="space-y-2">
-              {balances.map((balance, index) => (
+              {Object.entries(balances).map(([name, amount], index) => (
                 <div
                   className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
-                  key={`${balance.userId ?? balance.name}-${index}`}
+                  key={`${name}-${index}`}
                 >
-                  <p className="text-sm font-medium text-slate-900">{balance.name}</p>
+                  <p className="text-sm font-medium text-slate-900">{name}</p>
                   <p
                     className={`text-sm font-semibold ${
-                      balance.amount >= 0 ? "text-emerald-600" : "text-rose-600"
+                      amount >= 0 ? "text-emerald-600" : "text-rose-600"
                     }`}
                   >
-                    {balance.amount > 0 ? "+" : ""}
-                    {balance.amount} {currency}
+                    {amount > 0 ? "+" : ""}
+                    {amount} {currency}
                   </p>
                 </div>
               ))}

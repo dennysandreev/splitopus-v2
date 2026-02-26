@@ -83,12 +83,6 @@ export interface DebtTransaction {
   amount: number;
 }
 
-export interface ParticipantBalance {
-  userId?: string;
-  name: string;
-  amount: number;
-}
-
 interface DebtTransactionDto {
   from: string;
   to: string;
@@ -158,7 +152,7 @@ interface StoreState {
   currentTripMembers: TripMember[];
   expenses: Expense[];
   debts: DebtTransaction[];
-  balances: ParticipantBalance[];
+  balances: Record<string, number>;
   notes: Note[];
   stats: Stats | null;
   user: AppUser | null;
@@ -228,33 +222,6 @@ function mapDebt(dto: DebtTransactionDto): DebtTransaction {
   };
 }
 
-function mapBalances(data: GetDebtsResponse): ParticipantBalance[] {
-  if (Array.isArray(data.balances_list)) {
-    return data.balances_list.map((item) => ({
-      userId: item.user_id ? String(item.user_id) : undefined,
-      name: item.name ?? "Участник",
-      amount: item.amount,
-    }));
-  }
-
-  if (Array.isArray(data.participants)) {
-    return data.participants.map((item) => ({
-      userId: item.user_id ? String(item.user_id) : undefined,
-      name: item.name ?? "Участник",
-      amount: item.balance,
-    }));
-  }
-
-  if (data.balances) {
-    return Object.entries(data.balances).map(([name, amount]) => ({
-      name,
-      amount,
-    }));
-  }
-
-  return [];
-}
-
 function mapNote(dto: NoteDto): Note {
   return {
     id: String(dto.id),
@@ -288,7 +255,7 @@ export const useStore = create<StoreState>((set, get) => ({
   currentTripMembers: [],
   expenses: [],
   debts: [],
-  balances: [],
+  balances: {},
   notes: [],
   stats: null,
   user: null,
@@ -395,7 +362,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const data = (await response.json()) as GetDebtsResponse;
       set({
         debts: data.debts.map(mapDebt),
-        balances: mapBalances(data),
+        balances: data.balances ?? {},
         loading: false,
         error: null,
       });

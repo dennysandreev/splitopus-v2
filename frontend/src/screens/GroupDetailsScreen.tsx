@@ -37,16 +37,11 @@ function GroupDetailsScreen({
   }, [tripId, fetchExpenses, fetchDebts]);
 
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const debtsBalances = Object.fromEntries(
-    balances
-      .filter((item) => item.userId)
-      .map((item) => [String(item.userId), item.amount]),
-  ) as Record<string, number>;
-  const myBalance = user ? debtsBalances?.[String(user.id)] || 0 : 0;
+  const myBalance = user ? balances?.[String(user.id)] || 0 : 0;
 
   useEffect(() => {
-    console.log("Balances:", debtsBalances, "My ID:", user?.id);
-  }, [debtsBalances, user]);
+    console.log("Balances:", balances, "My ID:", user?.id);
+  }, [balances, user]);
 
   return (
     <div className="min-h-screen bg-slate-50">
