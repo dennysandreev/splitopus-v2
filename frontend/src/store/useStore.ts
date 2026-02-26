@@ -61,6 +61,8 @@ interface StatsCategoryDto {
 }
 
 interface GetStatsResponse {
+  by_category?: Record<string, number>;
+  my_by_category?: Record<string, number>;
   my?: StatsCategoryDto[];
   mine?: StatsCategoryDto[];
   overall?: StatsCategoryDto[];
@@ -206,6 +208,17 @@ function mapStatsCategory(dto: StatsCategoryDto): StatsCategory {
     category: dto.category ?? dto.name ?? "Без категории",
     amount: dto.amount,
   };
+}
+
+function mapCategoryRecord(record?: Record<string, number>): StatsCategory[] {
+  if (!record) {
+    return [];
+  }
+
+  return Object.entries(record).map(([category, amount]) => ({
+    category,
+    amount,
+  }));
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -361,12 +374,17 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      const userId = String(get().user?.id ?? "");
       const response = await fetch(`${API_BASE_URL}/api/notes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ trip_id: tripId, text }),
+        body: JSON.stringify({
+          trip_id: String(tripId),
+          user_id: userId,
+          text,
+        }),
       });
 
       if (!response.ok) {
@@ -395,10 +413,19 @@ export const useStore = create<StoreState>((set, get) => ({
       }
 
       const data = (await response.json()) as GetStatsResponse;
+      const myFromRecord = mapCategoryRecord(data.my_by_category);
+      const overallFromRecord = mapCategoryRecord(data.by_category);
+
       set({
         stats: {
-          my: (data.my ?? data.mine ?? []).map(mapStatsCategory),
-          overall: (data.overall ?? data.total ?? []).map(mapStatsCategory),
+          my:
+            myFromRecord.length > 0
+              ? myFromRecord
+              : (data.my ?? data.mine ?? []).map(mapStatsCategory),
+          overall:
+            overallFromRecord.length > 0
+              ? overallFromRecord
+              : (data.overall ?? data.total ?? []).map(mapStatsCategory),
         },
         loading: false,
         error: null,
