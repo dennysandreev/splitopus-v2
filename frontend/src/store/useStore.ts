@@ -489,8 +489,9 @@ export const useStore = create<StoreState>((set, get) => ({
     set({ loading: true, error: null, currentTripId: tripId });
 
     try {
+      const userId = get().user?.id ? String(get().user?.id) : "";
       const response = await fetch(
-        `${API_BASE_URL}/api/stats/${encodeURIComponent(tripId)}`,
+        `${API_BASE_URL}/api/stats/${encodeURIComponent(tripId)}?user_id=${encodeURIComponent(userId)}`,
       );
 
       if (!response.ok) {

@@ -36,20 +36,17 @@ function GroupDetailsScreen({
     void fetchDebts(tripId);
   }, [tripId, fetchExpenses, fetchDebts]);
 
-  useEffect(() => {
-    console.log("debts.balances", balances);
-  }, [balances]);
-
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const balancesById = Object.fromEntries(
+  const debtsBalances = Object.fromEntries(
     balances
       .filter((item) => item.userId)
-      .map((item) => [String(item.userId), item]),
-  ) as Record<string, (typeof balances)[number]>;
-  const myBalance =
-    (user ? balancesById[String(user.id)] : undefined) ??
-    balances.find((item) => item.name === user?.firstName) ??
-    null;
+      .map((item) => [String(item.userId), item.amount]),
+  ) as Record<string, number>;
+  const myBalance = user ? debtsBalances?.[String(user.id)] || 0 : 0;
+
+  useEffect(() => {
+    console.log("Balances:", debtsBalances, "My ID:", user?.id);
+  }, [debtsBalances, user]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -65,11 +62,11 @@ function GroupDetailsScreen({
               <p className="text-sm text-slate-500">Мой баланс</p>
               <p
                 className={`mt-1 text-2xl font-semibold ${
-                  (myBalance?.amount ?? 0) >= 0 ? "text-emerald-600" : "text-rose-600"
+                  myBalance >= 0 ? "text-emerald-600" : "text-rose-600"
                 }`}
               >
-                {(myBalance?.amount ?? 0) > 0 ? "+" : ""}
-                {myBalance?.amount ?? 0} ₽
+                {myBalance > 0 ? "+" : ""}
+                {myBalance} ₽
               </p>
             </div>
           </div>
