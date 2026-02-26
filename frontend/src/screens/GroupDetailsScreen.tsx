@@ -8,6 +8,8 @@ interface GroupDetailsScreenProps {
   tripId: string;
   onBack: () => void;
   onOpenDebts: () => void;
+  onOpenStats: () => void;
+  onOpenNotes: () => void;
   onOpenAddExpense: () => void;
 }
 
@@ -15,6 +17,8 @@ function GroupDetailsScreen({
   tripId,
   onBack,
   onOpenDebts,
+  onOpenStats,
+  onOpenNotes,
   onOpenAddExpense,
 }: GroupDetailsScreenProps) {
   const expenses = useStore((state) => state.expenses);
@@ -35,9 +39,15 @@ function GroupDetailsScreen({
         <Card>
           <p className="text-sm text-slate-500">Всего потрачено в группе</p>
           <p className="mt-1 text-2xl font-semibold text-slate-900">{totalSpent} ₽</p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={onOpenDebts} variant="secondary">
               Расчет долгов
+            </Button>
+            <Button onClick={onOpenStats} variant="secondary">
+              Статистика 📊
+            </Button>
+            <Button onClick={onOpenNotes} variant="secondary">
+              Заметки 📝
             </Button>
           </div>
         </Card>

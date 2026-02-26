@@ -25,6 +25,48 @@ interface GetExpensesResponse {
   expenses: ExpenseDto[];
 }
 
+export interface Note {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: string;
+}
+
+interface NoteDto {
+  id: string;
+  text: string;
+  author?: string;
+  author_name?: string;
+  created_at?: string;
+}
+
+interface GetNotesResponse {
+  notes: NoteDto[];
+}
+
+export interface StatsCategory {
+  category: string;
+  amount: number;
+}
+
+export interface Stats {
+  my: StatsCategory[];
+  overall: StatsCategory[];
+}
+
+interface StatsCategoryDto {
+  category?: string;
+  name?: string;
+  amount: number;
+}
+
+interface GetStatsResponse {
+  my?: StatsCategoryDto[];
+  mine?: StatsCategoryDto[];
+  overall?: StatsCategoryDto[];
+  total?: StatsCategoryDto[];
+}
+
 export interface DebtTransaction {
   from: string;
   to: string;
@@ -97,6 +139,8 @@ interface StoreState {
   currentTripMembers: TripMember[];
   expenses: Expense[];
   debts: DebtTransaction[];
+  notes: Note[];
+  stats: Stats | null;
   user: AppUser | null;
   loading: boolean;
   error: string | null;
@@ -105,6 +149,9 @@ interface StoreState {
   fetchExpenses: (tripId: string) => Promise<void>;
   fetchDebts: (tripId: string) => Promise<void>;
   addExpense: (expense: AddExpenseInput) => Promise<void>;
+  fetchNotes: (tripId: string) => Promise<void>;
+  addNote: (tripId: string, text: string) => Promise<void>;
+  fetchStats: (tripId: string) => Promise<void>;
   fetchTrips: () => Promise<void>;
   fetchTripMembers: (tripId: string) => Promise<void>;
 }
@@ -145,12 +192,30 @@ function mapDebt(dto: DebtTransactionDto): DebtTransaction {
   };
 }
 
+function mapNote(dto: NoteDto): Note {
+  return {
+    id: String(dto.id),
+    text: dto.text,
+    author: dto.author_name ?? dto.author ?? "Unknown",
+    createdAt: dto.created_at ?? "",
+  };
+}
+
+function mapStatsCategory(dto: StatsCategoryDto): StatsCategory {
+  return {
+    category: dto.category ?? dto.name ?? "Без категории",
+    amount: dto.amount,
+  };
+}
+
 export const useStore = create<StoreState>((set, get) => ({
   currentTripId: null,
   groups: [],
   currentTripMembers: [],
   expenses: [],
   debts: [],
+  notes: [],
+  stats: null,
   user: null,
   loading: false,
   error: null,
@@ -255,6 +320,86 @@ export const useStore = create<StoreState>((set, get) => ({
       const data = (await response.json()) as GetDebtsResponse;
       set({
         debts: data.debts.map(mapDebt),
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
+  fetchNotes: async (tripId) => {
+    set({ loading: true, error: null, currentTripId: tripId });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/notes/${encodeURIComponent(tripId)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch notes: ${response.status}`);
+      }
+
+      const data = (await response.json()) as GetNotesResponse;
+      set({
+        notes: (data.notes ?? []).map(mapNote),
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
+  addNote: async (tripId, text) => {
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ trip_id: tripId, text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add note: ${response.status}`);
+      }
+
+      await get().fetchNotes(tripId);
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
+  fetchStats: async (tripId) => {
+    set({ loading: true, error: null, currentTripId: tripId });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/stats/${encodeURIComponent(tripId)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch stats: ${response.status}`);
+      }
+
+      const data = (await response.json()) as GetStatsResponse;
+      set({
+        stats: {
+          my: (data.my ?? data.mine ?? []).map(mapStatsCategory),
+          overall: (data.overall ?? data.total ?? []).map(mapStatsCategory),
+        },
         loading: false,
         error: null,
       });

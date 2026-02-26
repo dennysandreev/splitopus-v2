@@ -4,9 +4,17 @@ import AddExpenseScreen from "./screens/AddExpenseScreen";
 import DebtsScreen from "./screens/DebtsScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
 import GroupsScreen from "./screens/GroupsScreen";
+import NotesScreen from "./screens/NotesScreen";
+import StatsScreen from "./screens/StatsScreen";
 import { useStore } from "./store/useStore";
 
-type ScreenName = "groups" | "groupDetails" | "addExpense" | "debts";
+type ScreenName =
+  | "groups"
+  | "groupDetails"
+  | "addExpense"
+  | "debts"
+  | "stats"
+  | "notes";
 
 function App() {
   const [screen, setScreen] = useState<ScreenName>("groups");
@@ -48,6 +56,14 @@ function App() {
     setScreen("debts");
   };
 
+  const goToStats = () => {
+    setScreen("stats");
+  };
+
+  const goToNotes = () => {
+    setScreen("notes");
+  };
+
   const addExpenseGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
   if (authInitialized && user === null && !loading) {
@@ -79,6 +95,8 @@ function App() {
           tripId={selectedGroupId}
           onBack={goToGroups}
           onOpenDebts={goToDebts}
+          onOpenStats={goToStats}
+          onOpenNotes={goToNotes}
           onOpenAddExpense={goToAddExpense}
         />
       ) : null}
@@ -90,6 +108,12 @@ function App() {
       ) : null}
       {screen === "debts" && selectedGroupId ? (
         <DebtsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+      ) : null}
+      {screen === "stats" && selectedGroupId ? (
+        <StatsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+      ) : null}
+      {screen === "notes" && selectedGroupId ? (
+        <NotesScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
       ) : null}
     </div>
   );
