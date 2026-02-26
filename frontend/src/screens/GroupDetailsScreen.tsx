@@ -36,9 +36,18 @@ function GroupDetailsScreen({
     void fetchDebts(tripId);
   }, [tripId, fetchExpenses, fetchDebts]);
 
+  useEffect(() => {
+    console.log("debts.balances", balances);
+  }, [balances]);
+
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const balancesById = Object.fromEntries(
+    balances
+      .filter((item) => item.userId)
+      .map((item) => [String(item.userId), item]),
+  ) as Record<string, (typeof balances)[number]>;
   const myBalance =
-    balances.find((item) => item.userId && item.userId === String(user?.id)) ??
+    (user ? balancesById[String(user.id)] : undefined) ??
     balances.find((item) => item.name === user?.firstName) ??
     null;
 

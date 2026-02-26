@@ -8,9 +8,13 @@ interface ExpenseDetailsScreenProps {
 }
 
 function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) {
+  const currentTripMembers = useStore((state) => state.currentTripMembers);
   const expense = useStore((state) =>
     state.expenses.find((item) => item.id === expenseId),
   );
+
+  const getMemberName = (id: string) =>
+    currentTripMembers.find((member) => String(member.id) === String(id))?.name ?? id;
 
   if (!expense) {
     return (
@@ -42,7 +46,7 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Кто платил</p>
               <p className="text-sm font-medium text-slate-900">
-                {expense.payerName ?? expense.payerId}
+                {expense.payerName ?? getMemberName(expense.payerId)}
               </p>
             </div>
           </div>
@@ -69,7 +73,9 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
             Object.entries(expense.split).map(([userId, amount]) => (
               <Card key={userId}>
                 <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-medium text-slate-900">{userId}</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {getMemberName(userId)}
+                  </p>
                   <p className="text-sm text-slate-700">{amount} ₽</p>
                 </div>
               </Card>
