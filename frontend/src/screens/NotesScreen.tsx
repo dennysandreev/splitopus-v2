@@ -33,9 +33,12 @@ function NotesScreen({ tripId, onBack }: NotesScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar onBack={onBack} title="Заметки" />
-      <main className="space-y-4 p-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
+      <header className="flex-none z-10 bg-slate-50">
+        <Navbar onBack={onBack} title="Заметки" />
+      </header>
+      <main className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         {loading ? <p className="text-sm text-slate-500">Загрузка заметок...</p> : null}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
@@ -52,10 +55,11 @@ function NotesScreen({ tripId, onBack }: NotesScreenProps) {
             </Card>
           ) : null}
         </section>
+        </div>
       </main>
 
       <form
-        className="sticky bottom-0 left-0 right-0 border-t border-slate-200 bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="flex-none border-t border-slate-200 bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
         onSubmit={handleSubmit}
       >
         <div className="mx-auto flex max-w-3xl items-center gap-2">

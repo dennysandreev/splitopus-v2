@@ -35,9 +35,12 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar onBack={onBack} title="Баланс поездки" />
-      <main className="space-y-3 p-4">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
+      <header className="flex-none z-10 bg-slate-50">
+        <Navbar onBack={onBack} title="Баланс поездки" />
+      </header>
+      <main className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-3">
         {loading ? <p className="text-sm text-slate-500">Загрузка расчетов...</p> : null}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
@@ -103,6 +106,7 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
             </Card>
           ))}
         </section>
+        </div>
       </main>
     </div>
   );

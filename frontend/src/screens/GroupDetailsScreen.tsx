@@ -51,20 +51,25 @@ function GroupDetailsScreen({
   }, [balances, user]);
 
   const handleShare = () => {
-    if (!trip?.code) {
+    if (!trip?.code || !trip?.name) {
       return;
     }
 
-    const shareText = encodeURIComponent(`Присоединяйся к поездке, код: ${trip.code}`);
-    const shareUrl = encodeURIComponent("https://t.me/SplitopusBot");
+    const botStartLink = `https://t.me/SplitopusBot?start=${trip.code}`;
+    const shareText = encodeURIComponent(
+      `Присоединяйся к поездке "${trip.name}" в Splitopus! 🌴\nКод: ${trip.code}\n👉 ${botStartLink}`,
+    );
+    const shareUrl = encodeURIComponent(botStartLink);
     WebApp.openTelegramLink(`https://t.me/share/url?url=${shareUrl}&text=${shareText}`);
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-50">
-      <Navbar onBack={onBack} title="Детали поездки" />
-      <main className="flex-1 overflow-y-auto p-4">
-        <Card className="sticky top-0 z-10 mb-4 bg-slate-50/95 backdrop-blur">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
+      <header className="flex-none z-10 bg-slate-50">
+        <Navbar onBack={onBack} title="Детали поездки" />
+        <div className="p-4 pt-0">
+        <Card className="bg-slate-50">
+          <p className="text-base font-semibold text-slate-900">{trip?.name ?? "Поездка"}</p>
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Код поездки: {trip?.code ?? "—"}
@@ -107,6 +112,9 @@ function GroupDetailsScreen({
             </Button>
           </div>
         </Card>
+        </div>
+      </header>
+      <main className="flex-1 overflow-y-auto p-4 pt-0">
 
         <section className="space-y-3 pb-20">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
