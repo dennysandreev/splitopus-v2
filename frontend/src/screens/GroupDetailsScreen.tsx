@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import WebApp from "@twa-dev/sdk";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
 import { CATEGORY_LABELS, formatMoney } from "../utils/format";
+import { getMemberName } from "../utils/members";
 
 interface GroupDetailsScreenProps {
   tripId: string;
@@ -26,7 +27,9 @@ function GroupDetailsScreen({
   onOpenAddExpense,
   onOpenExpense,
 }: GroupDetailsScreenProps) {
+  const [filterUser, setFilterUser] = useState<string | null>(null);
   const expenses = useStore((state) => state.expenses);
+  const currentTripMembers = useStore((state) => state.currentTripMembers);
   const balances = useStore((state) => state.balances);
   const groups = useStore((state) => state.groups);
   const user = useStore((state) => state.user);
@@ -34,16 +37,25 @@ function GroupDetailsScreen({
   const error = useStore((state) => state.error);
   const fetchExpenses = useStore((state) => state.fetchExpenses);
   const fetchDebts = useStore((state) => state.fetchDebts);
+  const fetchTripMembers = useStore((state) => state.fetchTripMembers);
 
   useEffect(() => {
     void fetchExpenses(tripId);
     void fetchDebts(tripId);
-  }, [tripId, fetchExpenses, fetchDebts]);
+    void fetchTripMembers(tripId);
+  }, [tripId, fetchExpenses, fetchDebts, fetchTripMembers]);
 
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const trip = groups.find((group) => group.id === tripId);
   const currency = trip?.currency ?? "₽";
   const myBalance = user ? balances?.[String(user.id)] || 0 : 0;
+  const filteredExpenses = useMemo(() => {
+    if (!filterUser) {
+      return expenses;
+    }
+
+    return expenses.filter((expense) => String(expense.payerId) === String(filterUser));
+  }, [expenses, filterUser]);
 
   useEffect(() => {
     console.log("Balances:", balances, "My ID:", user?.id);
@@ -150,12 +162,40 @@ function GroupDetailsScreen({
 
       <main className="flex-1 overflow-y-auto px-4 pb-4">
         <section className="space-y-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <button
+              className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition ${
+                filterUser === null
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-200 text-slate-700"
+              }`}
+              onClick={() => setFilterUser(null)}
+              type="button"
+            >
+              Все
+            </button>
+            {currentTripMembers.map((member) => (
+              <button
+                className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition ${
+                  filterUser === String(member.id)
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-200 text-slate-700"
+                }`}
+                key={member.id}
+                onClick={() => setFilterUser(String(member.id))}
+                type="button"
+              >
+                {member.name}
+              </button>
+            ))}
+          </div>
+
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
             Последние оплаты
           </h2>
           {loading ? <p className="text-sm text-slate-500">Загрузка...</p> : null}
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-          {expenses.map((expense) => (
+          {filteredExpenses.map((expense) => (
             <button
               className="w-full text-left"
               key={expense.id}
@@ -169,7 +209,8 @@ function GroupDetailsScreen({
                       {expense.description}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {CATEGORY_LABELS[expense.category] ?? expense.category}
+                      {CATEGORY_LABELS[expense.category] ?? expense.category} ·{" "}
+                      {getMemberName(currentTripMembers, expense.payerId)}
                     </p>
                   </div>
                   <p className="text-sm text-slate-700">
@@ -179,7 +220,7 @@ function GroupDetailsScreen({
               </Card>
             </button>
           ))}
-          {!loading && expenses.length === 0 ? (
+          {!loading && filteredExpenses.length === 0 ? (
             <Card className="rounded-2xl">
               <p className="text-sm text-slate-500">Расходов пока нет</p>
             </Card>
