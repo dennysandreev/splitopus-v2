@@ -1,11 +1,11 @@
 export const CATEGORY_LABELS: Record<string, string> = {
   FOOD: "🍔 Еда",
+  ALCOHOL: "🍺 Алкоголь",
   TRANSPORT: "🚕 Транспорт",
-  HOME: "🏠 Жилье",
   SHOP: "🛒 Магазин",
   FUN: "🎉 Развлечения",
+  HOME: "🏠 Жилье",
   OTHER: "📦 Другое",
-  REPAYMENT: "💸 Возврат долга",
 };
 
 export function formatMoney(value: number): string {

@@ -116,6 +116,8 @@ export interface Trip {
   code: string;
   currency: string;
   rate: number;
+  createdAt?: string;
+  participantsCount?: number;
 }
 
 export interface TripMember {
@@ -132,6 +134,7 @@ interface TripDto {
   rate: number;
   creator_id: string;
   created_at: string;
+  participants_count?: number;
 }
 
 interface GetTripsResponse {
@@ -170,7 +173,7 @@ interface StoreState {
   addNote: (tripId: string, text: string) => Promise<void>;
   fetchStats: (tripId: string) => Promise<void>;
   fetchTrips: () => Promise<void>;
-  createTrip: (name: string, currency: string) => Promise<void>;
+  createTrip: (name: string, currency: string) => Promise<boolean>;
   fetchTripMembers: (tripId: string) => Promise<void>;
 }
 
@@ -181,6 +184,8 @@ function mapTrip(dto: TripDto): Trip {
     code: dto.code,
     currency: dto.currency,
     rate: dto.rate ?? 0,
+    createdAt: dto.created_at,
+    participantsCount: dto.participants_count,
   };
 }
 
@@ -329,7 +334,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const { user } = get();
     if (!user?.id) {
       set({ error: "User is not authorized" });
-      return;
+      return false;
     }
 
     set({ loading: true, error: null });
@@ -343,7 +348,7 @@ export const useStore = create<StoreState>((set, get) => ({
         body: JSON.stringify({
           name,
           currency,
-          user_id: String(user.id),
+          creator_id: String(user.id),
         }),
       });
 
@@ -351,12 +356,14 @@ export const useStore = create<StoreState>((set, get) => ({
         throw new Error(`Failed to create trip: ${response.status}`);
       }
 
-      await get().fetchTrips();
+      set({ loading: false, error: null });
+      return true;
     } catch (error) {
       set({
         loading: false,
         error: error instanceof Error ? error.message : "Unknown error",
       });
+      return false;
     }
   },
 

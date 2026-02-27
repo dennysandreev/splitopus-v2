@@ -18,6 +18,7 @@ function GroupsScreen({ onSelectGroup }: GroupsScreenProps) {
   const groups = useStore((state) => state.groups);
   const loading = useStore((state) => state.loading);
   const createTrip = useStore((state) => state.createTrip);
+  const fetchTrips = useStore((state) => state.fetchTrips);
 
   const handleCreateTrip = async () => {
     const normalizedName = tripName.trim();
@@ -25,18 +26,31 @@ function GroupsScreen({ onSelectGroup }: GroupsScreenProps) {
       return;
     }
 
-    await createTrip(normalizedName, tripCurrency);
-    setTripName("");
-    setTripCurrency("THB");
-    setIsCreateOpen(false);
+    try {
+      const success = await createTrip(normalizedName, tripCurrency);
+      if (!success) {
+        throw new Error("Не удалось создать поездку");
+      }
+
+      setTripName("");
+      setTripCurrency("THB");
+      setIsCreateOpen(false);
+      await fetchTrips();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Ошибка создания поездки");
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar title="Splitopus 🐙" />
       <main className="space-y-3 p-4">
-        <div className="flex justify-end">
-          <Button onClick={() => setIsCreateOpen(true)} variant="secondary">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold text-slate-900">Мои путешествия 🌍</h1>
+          <p className="text-sm text-slate-600">
+            Выберите поездку, чтобы управлять расходами.
+          </p>
+          <Button className="w-full sm:w-auto" onClick={() => setIsCreateOpen(true)}>
             Создать поездку
           </Button>
         </div>
@@ -58,9 +72,21 @@ function GroupsScreen({ onSelectGroup }: GroupsScreenProps) {
             type="button"
           >
             <Card className="transition-colors hover:bg-slate-50">
-              <div className="flex items-center justify-between">
-                <p className="text-base font-medium text-slate-900">{group.name}</p>
-                <p className="text-sm font-semibold text-emerald-600">{group.currency}</p>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-base font-medium text-slate-900">{group.name}</p>
+                  <p className="text-sm font-semibold text-emerald-600">{group.currency}</p>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {group.createdAt
+                    ? `Создана: ${new Date(group.createdAt).toLocaleDateString("ru-RU")}`
+                    : `Код: ${group.code}`}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {typeof group.participantsCount === "number"
+                    ? `Участников: ${group.participantsCount}`
+                    : "Участники: данные появятся позже"}
+                </p>
               </div>
             </Card>
           </button>

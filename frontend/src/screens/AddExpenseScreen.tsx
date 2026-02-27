@@ -11,7 +11,14 @@ interface AddExpenseScreenProps {
 }
 
 type SplitMode = "equal" | "exact";
-type ExpenseCategoryCode = "FOOD" | "TRANSPORT" | "HOME" | "SHOP" | "FUN" | "OTHER";
+type ExpenseCategoryCode =
+  | "FOOD"
+  | "ALCOHOL"
+  | "TRANSPORT"
+  | "SHOP"
+  | "FUN"
+  | "HOME"
+  | "OTHER";
 
 interface MemberGroup {
   masterId: string;
@@ -20,10 +27,11 @@ interface MemberGroup {
 
 const CATEGORY_OPTIONS: Array<{ code: ExpenseCategoryCode; label: string }> = [
   { code: "FOOD", label: CATEGORY_LABELS.FOOD },
+  { code: "ALCOHOL", label: CATEGORY_LABELS.ALCOHOL },
   { code: "TRANSPORT", label: CATEGORY_LABELS.TRANSPORT },
-  { code: "HOME", label: CATEGORY_LABELS.HOME },
   { code: "SHOP", label: CATEGORY_LABELS.SHOP },
   { code: "FUN", label: CATEGORY_LABELS.FUN },
+  { code: "HOME", label: CATEGORY_LABELS.HOME },
   { code: "OTHER", label: CATEGORY_LABELS.OTHER },
 ];
 
