@@ -76,26 +76,20 @@ function GroupDetailsScreen({
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <header className="flex-none z-10 bg-slate-50">
+      <header className="flex-none z-10 bg-white shadow-md">
         <Navbar onBack={onBack} title="Детали поездки" />
         <div className="px-4 pb-4">
-          <Card className="rounded-2xl bg-slate-50">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-lg font-semibold text-slate-900">
-                  {trip?.name ?? "Поездка"}
-                </p>
-                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-                  Код: {trip?.code ?? "—"}
-                </p>
-              </div>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold text-slate-900">
+                {trip?.name ?? "Поездка"}
+              </p>
               <button
-                aria-label="Поделиться"
-                className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
+                className="mt-1 flex items-center text-xs text-slate-500 hover:text-slate-700"
                 onClick={handleShare}
                 type="button"
               >
-                🔗
+                🔗 Поделиться поездкой
               </button>
             </div>
 
@@ -156,7 +150,7 @@ function GroupDetailsScreen({
             >
               Добавить транзакцию
             </button>
-          </Card>
+          </div>
         </div>
       </header>
 

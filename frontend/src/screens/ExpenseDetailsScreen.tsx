@@ -11,6 +11,10 @@ interface ExpenseDetailsScreenProps {
 
 function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) {
   const currentTripMembers = useStore((state) => state.currentTripMembers);
+  const currentTripId = useStore((state) => state.currentTripId);
+  const trip = useStore((state) => state.groups.find((g) => g.id === currentTripId));
+  const currency = trip?.currency ?? "";
+
   const expense = useStore((state) =>
     state.expenses.find((item) => item.id === expenseId),
   );
@@ -41,7 +45,7 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Сумма</p>
             <p className="text-2xl font-semibold text-slate-900">
-              {formatMoney(expense.amount)} ₽
+              {formatMoney(expense.amount)} {currency}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -75,7 +79,7 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
                   <p className="text-sm font-medium text-slate-900">
                     {getMemberName(currentTripMembers, item.userId ?? item.name)}
                   </p>
-                  <p className="text-sm text-slate-700">{formatMoney(item.amount)} ₽</p>
+                  <p className="text-sm text-slate-700">{formatMoney(item.amount)} {currency}</p>
                 </div>
               </Card>
             ))
@@ -86,7 +90,7 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
                   <p className="text-sm font-medium text-slate-900">
                     {getMemberName(currentTripMembers, userId)}
                   </p>
-                  <p className="text-sm text-slate-700">{formatMoney(amount)} ₽</p>
+                  <p className="text-sm text-slate-700">{formatMoney(amount)} {currency}</p>
                 </div>
               </Card>
             ))
