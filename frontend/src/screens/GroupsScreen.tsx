@@ -42,10 +42,9 @@ function GroupsScreen({ onSelectGroup }: GroupsScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="flex h-full flex-col bg-slate-50">
       <Navbar title="Splitopus 🐙" />
-      <main className="space-y-3 p-4">
-        <div className="space-y-2">
+      <div className="shrink-0 space-y-2 p-4">
           <h1 className="text-2xl font-semibold text-slate-900">Мои путешествия 🌍</h1>
           <p className="text-sm text-slate-600">
             Выберите поездку, чтобы управлять расходами.
@@ -53,8 +52,9 @@ function GroupsScreen({ onSelectGroup }: GroupsScreenProps) {
           <Button className="w-full sm:w-auto" onClick={() => setIsCreateOpen(true)}>
             Создать поездку
           </Button>
-        </div>
-
+      </div>
+      <main className="flex-1 overflow-y-auto px-4 pb-4">
+        <div className="space-y-3">
         {groups.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-500">Групп пока нет</p>
@@ -91,6 +91,7 @@ function GroupsScreen({ onSelectGroup }: GroupsScreenProps) {
             </Card>
           </button>
         ))}
+        </div>
       </main>
 
       {isCreateOpen ? (

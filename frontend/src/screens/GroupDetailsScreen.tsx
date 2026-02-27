@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import WebApp from "@twa-dev/sdk";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
@@ -49,11 +50,29 @@ function GroupDetailsScreen({
     console.log("Balances:", balances, "My ID:", user?.id);
   }, [balances, user]);
 
+  const handleShare = () => {
+    if (!trip?.code) {
+      return;
+    }
+
+    const shareText = encodeURIComponent(`Присоединяйся к поездке, код: ${trip.code}`);
+    const shareUrl = encodeURIComponent("https://t.me/SplitopusBot");
+    WebApp.openTelegramLink(`https://t.me/share/url?url=${shareUrl}&text=${shareText}`);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="flex h-full flex-col bg-slate-50">
       <Navbar onBack={onBack} title="Детали поездки" />
-      <main className="space-y-4 p-4">
-        <Card>
+      <main className="flex-1 overflow-y-auto p-4">
+        <Card className="sticky top-0 z-10 mb-4 bg-slate-50/95 backdrop-blur">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Код поездки: {trip?.code ?? "—"}
+            </p>
+            <Button onClick={handleShare} variant="secondary">
+              Поделиться
+            </Button>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-slate-500">Всего</p>
@@ -89,7 +108,7 @@ function GroupDetailsScreen({
           </div>
         </Card>
 
-        <section className="space-y-3">
+        <section className="space-y-3 pb-20">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
             Последние оплаты
           </h2>

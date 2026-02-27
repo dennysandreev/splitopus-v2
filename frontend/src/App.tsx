@@ -102,7 +102,7 @@ function App() {
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-slate-50">
       {screen === "groups" ? <GroupsScreen onSelectGroup={openGroupDetails} /> : null}
       {screen === "groupDetails" && selectedGroupId ? (
         <GroupDetailsScreen
