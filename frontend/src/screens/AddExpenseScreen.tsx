@@ -189,10 +189,12 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar onBack={onBack} title="Новая транзакция" />
-      <main className="p-4">
-        <Card className="space-y-4">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
+      <header className="flex-none z-10 bg-slate-50">
+        <Navbar onBack={onBack} title="Новая транзакция" />
+      </header>
+      <main className="flex-1 overflow-y-auto p-4">
+        <Card className="space-y-4 rounded-2xl">
           <div className="space-y-1.5">
             <label className="text-sm text-slate-600" htmlFor="amount">
               Сумма

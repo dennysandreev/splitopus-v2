@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import WebApp from "@twa-dev/sdk";
-import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
@@ -67,56 +66,90 @@ function GroupDetailsScreen({
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
       <header className="flex-none z-10 bg-slate-50">
         <Navbar onBack={onBack} title="Детали поездки" />
-        <div className="p-4 pt-0">
-        <Card className="bg-slate-50">
-          <p className="text-base font-semibold text-slate-900">{trip?.name ?? "Поездка"}</p>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Код поездки: {trip?.code ?? "—"}
-            </p>
-            <Button onClick={handleShare} variant="secondary">
-              Поделиться
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-slate-500">Всего</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">
-                {formatMoney(totalSpent)} {currency}
-              </p>
+        <div className="px-4 pb-4">
+          <Card className="rounded-2xl bg-slate-50">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">
+                  {trip?.name ?? "Поездка"}
+                </p>
+                <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
+                  Код: {trip?.code ?? "—"}
+                </p>
+              </div>
+              <button
+                aria-label="Поделиться"
+                className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700"
+                onClick={handleShare}
+                type="button"
+              >
+                🔗
+              </button>
             </div>
-            <div>
+
+            <div className="mt-4 text-center">
               <p className="text-sm text-slate-500">Мой баланс</p>
               <p
-                className={`mt-1 text-2xl font-semibold ${
+                className={`mt-1 text-4xl font-semibold ${
                   myBalance >= 0 ? "text-emerald-600" : "text-rose-600"
                 }`}
               >
                 {myBalance > 0 ? "+" : ""}
                 {formatMoney(myBalance)} {currency}
               </p>
+              <p className="mt-2 text-sm text-slate-500">
+                Всего в поездке: {formatMoney(totalSpent)} {currency}
+              </p>
             </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={onOpenDebts} variant="secondary">
-              Баланс поездки
-            </Button>
-            <Button onClick={onOpenStats} variant="secondary">
-              Статистика 📊
-            </Button>
-            <Button onClick={onOpenNotes} variant="secondary">
-              Заметки 📝
-            </Button>
-            <Button onClick={onOpenRoulette} variant="secondary">
-              Рулетка 🎲
-            </Button>
-          </div>
-        </Card>
+
+            <div className="mt-5 grid grid-cols-4 gap-2">
+              <button
+                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                onClick={onOpenStats}
+                type="button"
+              >
+                <div className="text-lg">📊</div>
+                <div className="mt-1 text-xs text-slate-600">Статистика</div>
+              </button>
+              <button
+                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                onClick={onOpenDebts}
+                type="button"
+              >
+                <div className="text-lg">⚖️</div>
+                <div className="mt-1 text-xs text-slate-600">Баланс</div>
+              </button>
+              <button
+                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                onClick={onOpenNotes}
+                type="button"
+              >
+                <div className="text-lg">📝</div>
+                <div className="mt-1 text-xs text-slate-600">Заметки</div>
+              </button>
+              <button
+                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                onClick={onOpenRoulette}
+                type="button"
+              >
+                <div className="text-lg">🎲</div>
+                <div className="mt-1 text-xs text-slate-600">Рулетка</div>
+              </button>
+            </div>
+
+            <button
+              className="mt-4 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white"
+              onClick={onOpenAddExpense}
+              type="button"
+            >
+              Добавить транзакцию
+            </button>
+          </Card>
         </div>
       </header>
-      <main className="flex-1 overflow-y-auto p-4 pt-0">
 
-        <section className="space-y-3 pb-20">
+      <main className="flex-1 overflow-y-auto px-4 pb-4">
+        <section className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
             Последние оплаты
           </h2>
@@ -129,7 +162,7 @@ function GroupDetailsScreen({
               onClick={() => onOpenExpense(expense.id)}
               type="button"
             >
-              <Card className="transition-colors hover:bg-slate-50">
+              <Card className="rounded-2xl transition-colors hover:bg-slate-50">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-900">
@@ -147,21 +180,12 @@ function GroupDetailsScreen({
             </button>
           ))}
           {!loading && expenses.length === 0 ? (
-            <Card>
+            <Card className="rounded-2xl">
               <p className="text-sm text-slate-500">Расходов пока нет</p>
             </Card>
           ) : null}
         </section>
       </main>
-
-      <button
-        aria-label="Добавить расход"
-        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-3xl leading-none text-white shadow-lg hover:bg-slate-800"
-        onClick={onOpenAddExpense}
-        type="button"
-      >
-        +
-      </button>
     </div>
   );
 }
