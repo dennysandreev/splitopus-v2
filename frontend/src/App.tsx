@@ -6,6 +6,7 @@ import ExpenseDetailsScreen from "./screens/ExpenseDetailsScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
 import GroupsScreen from "./screens/GroupsScreen";
 import NotesScreen from "./screens/NotesScreen";
+import RouletteScreen from "./screens/RouletteScreen";
 import StatsScreen from "./screens/StatsScreen";
 import { useStore } from "./store/useStore";
 
@@ -16,7 +17,8 @@ type ScreenName =
   | "debts"
   | "expenseDetails"
   | "stats"
-  | "notes";
+  | "notes"
+  | "roulette";
 
 function App() {
   const [screen, setScreen] = useState<ScreenName>("groups");
@@ -72,6 +74,10 @@ function App() {
     setScreen("notes");
   };
 
+  const goToRoulette = () => {
+    setScreen("roulette");
+  };
+
   const addExpenseGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
   if (authInitialized && user === null && !loading) {
@@ -105,6 +111,7 @@ function App() {
           onOpenDebts={goToDebts}
           onOpenStats={goToStats}
           onOpenNotes={goToNotes}
+          onOpenRoulette={goToRoulette}
           onOpenAddExpense={goToAddExpense}
           onOpenExpense={goToExpenseDetails}
         />
@@ -129,6 +136,9 @@ function App() {
       ) : null}
       {screen === "notes" && selectedGroupId ? (
         <NotesScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+      ) : null}
+      {screen === "roulette" && selectedGroupId ? (
+        <RouletteScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
       ) : null}
     </div>
   );

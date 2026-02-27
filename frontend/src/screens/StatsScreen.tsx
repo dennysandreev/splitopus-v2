@@ -9,6 +9,7 @@ import {
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
+import { CATEGORY_LABELS, formatMoney } from "../utils/format";
 
 type StatsTab = "my" | "overall";
 
@@ -42,6 +43,11 @@ function StatsScreen({ tripId, onBack }: StatsScreenProps) {
     return tab === "my" ? stats.my : stats.overall;
   }, [stats, tab]);
 
+  const total = useMemo(
+    () => chartData.reduce((sum, item) => sum + item.amount, 0),
+    [chartData],
+  );
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar onBack={onBack} title="Статистика" />
@@ -71,6 +77,13 @@ function StatsScreen({ tripId, onBack }: StatsScreenProps) {
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
         <Card>
+          <p className="text-sm text-slate-500">Итого</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900">
+            {formatMoney(total)} {currency}
+          </p>
+        </Card>
+
+        <Card>
           {chartData.length > 0 ? (
             <div className="h-64">
               <ResponsiveContainer height="100%" width="100%">
@@ -89,7 +102,18 @@ function StatsScreen({ tripId, onBack }: StatsScreenProps) {
                       />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    formatter={(value, _name, payload) => {
+                      const numericValue = Number(value ?? 0);
+                      const percent = total > 0 ? (numericValue / total) * 100 : 0;
+                      return [
+                        `${formatMoney(numericValue)} ${currency} (${formatMoney(percent)}%)`,
+                        CATEGORY_LABELS[payload?.payload?.category] ??
+                          payload?.payload?.category ??
+                          "Категория",
+                      ];
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -107,10 +131,13 @@ function StatsScreen({ tripId, onBack }: StatsScreenProps) {
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                   />
-                  <span className="text-sm font-medium text-slate-900">{item.category}</span>
+                  <span className="text-sm font-medium text-slate-900">
+                    {CATEGORY_LABELS[item.category] ?? item.category}
+                  </span>
                 </div>
                 <span className="text-sm font-semibold text-slate-900">
-                  {item.amount} {currency}
+                  {formatMoney(item.amount)} {currency} (
+                  {formatMoney(total > 0 ? (item.amount / total) * 100 : 0)}%)
                 </span>
               </div>
             </Card>

@@ -1,6 +1,8 @@
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
+import { CATEGORY_LABELS, formatMoney } from "../utils/format";
+import { getMemberName } from "../utils/members";
 
 interface ExpenseDetailsScreenProps {
   expenseId: string;
@@ -12,9 +14,6 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
   const expense = useStore((state) =>
     state.expenses.find((item) => item.id === expenseId),
   );
-
-  const getMemberName = (id: string) =>
-    currentTripMembers.find((member) => String(member.id) === String(id))?.name ?? id;
 
   if (!expense) {
     return (
@@ -36,17 +35,21 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
         <Card className="space-y-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Сумма</p>
-            <p className="text-2xl font-semibold text-slate-900">{expense.amount} ₽</p>
+            <p className="text-2xl font-semibold text-slate-900">
+              {formatMoney(expense.amount)} ₽
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Категория</p>
-              <p className="text-sm font-medium text-slate-900">{expense.category}</p>
+              <p className="text-sm font-medium text-slate-900">
+                {CATEGORY_LABELS[expense.category] ?? expense.category}
+              </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Кто платил</p>
               <p className="text-sm font-medium text-slate-900">
-                {expense.payerName ?? getMemberName(expense.payerId)}
+                {expense.payerName ?? getMemberName(currentTripMembers, expense.payerId)}
               </p>
             </div>
           </div>
@@ -64,8 +67,10 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
             expense.splitDetails.map((item, index) => (
               <Card key={`${item.userId ?? item.name}-${index}`}>
                 <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-medium text-slate-900">{item.name}</p>
-                  <p className="text-sm text-slate-700">{item.amount} ₽</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {getMemberName(currentTripMembers, item.userId ?? item.name)}
+                  </p>
+                  <p className="text-sm text-slate-700">{formatMoney(item.amount)} ₽</p>
                 </div>
               </Card>
             ))
@@ -74,9 +79,9 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
               <Card key={userId}>
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-sm font-medium text-slate-900">
-                    {getMemberName(userId)}
+                    {getMemberName(currentTripMembers, userId)}
                   </p>
-                  <p className="text-sm text-slate-700">{amount} ₽</p>
+                  <p className="text-sm text-slate-700">{formatMoney(amount)} ₽</p>
                 </div>
               </Card>
             ))

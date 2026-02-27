@@ -3,6 +3,7 @@ import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
+import { CATEGORY_LABELS, formatMoney } from "../utils/format";
 
 interface GroupDetailsScreenProps {
   tripId: string;
@@ -10,6 +11,7 @@ interface GroupDetailsScreenProps {
   onOpenDebts: () => void;
   onOpenStats: () => void;
   onOpenNotes: () => void;
+  onOpenRoulette: () => void;
   onOpenAddExpense: () => void;
   onOpenExpense: (expenseId: string) => void;
 }
@@ -20,6 +22,7 @@ function GroupDetailsScreen({
   onOpenDebts,
   onOpenStats,
   onOpenNotes,
+  onOpenRoulette,
   onOpenAddExpense,
   onOpenExpense,
 }: GroupDetailsScreenProps) {
@@ -55,7 +58,7 @@ function GroupDetailsScreen({
             <div>
               <p className="text-sm text-slate-500">Всего</p>
               <p className="mt-1 text-2xl font-semibold text-slate-900">
-                {totalSpent} {currency}
+                {formatMoney(totalSpent)} {currency}
               </p>
             </div>
             <div>
@@ -66,7 +69,7 @@ function GroupDetailsScreen({
                 }`}
               >
                 {myBalance > 0 ? "+" : ""}
-                {myBalance} {currency}
+                {formatMoney(myBalance)} {currency}
               </p>
             </div>
           </div>
@@ -80,12 +83,15 @@ function GroupDetailsScreen({
             <Button onClick={onOpenNotes} variant="secondary">
               Заметки 📝
             </Button>
+            <Button onClick={onOpenRoulette} variant="secondary">
+              Рулетка 🎲
+            </Button>
           </div>
         </Card>
 
         <section className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
-            Последние расходы
+            Последние оплаты
           </h2>
           {loading ? <p className="text-sm text-slate-500">Загрузка...</p> : null}
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
@@ -102,10 +108,12 @@ function GroupDetailsScreen({
                     <p className="text-sm font-medium text-slate-900">
                       {expense.description}
                     </p>
-                    <p className="text-xs text-slate-500">{expense.category}</p>
+                    <p className="text-xs text-slate-500">
+                      {CATEGORY_LABELS[expense.category] ?? expense.category}
+                    </p>
                   </div>
                   <p className="text-sm text-slate-700">
-                    {expense.amount} {currency}
+                    {formatMoney(expense.amount)} {currency}
                   </p>
                 </div>
               </Card>

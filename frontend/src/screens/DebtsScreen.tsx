@@ -3,6 +3,8 @@ import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
+import { formatMoney } from "../utils/format";
+import { getMemberName } from "../utils/members";
 
 interface DebtsScreenProps {
   tripId: string;
@@ -13,14 +15,17 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
   const debts = useStore((state) => state.debts);
   const balances = useStore((state) => state.balances);
   const groups = useStore((state) => state.groups);
+  const currentTripMembers = useStore((state) => state.currentTripMembers);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
   const fetchDebts = useStore((state) => state.fetchDebts);
+  const fetchTripMembers = useStore((state) => state.fetchTripMembers);
   const notifyDebts = useStore((state) => state.notifyDebts);
 
   useEffect(() => {
     void fetchDebts(tripId);
-  }, [tripId, fetchDebts]);
+    void fetchTripMembers(tripId);
+  }, [tripId, fetchDebts, fetchTripMembers]);
 
   const trip = groups.find((group) => group.id === tripId);
   const currency = trip?.currency ?? "₽";
@@ -31,7 +36,7 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar onBack={onBack} title="Расчет долгов" />
+      <Navbar onBack={onBack} title="Баланс поездки" />
       <main className="space-y-3 p-4">
         {loading ? <p className="text-sm text-slate-500">Загрузка расчетов...</p> : null}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
@@ -48,19 +53,21 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
 
           {Object.keys(balances).length > 0 ? (
             <div className="space-y-2">
-              {Object.entries(balances).map(([name, amount], index) => (
+              {Object.entries(balances).map(([idOrName, amount], index) => (
                 <div
                   className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
-                  key={`${name}-${index}`}
+                  key={`${idOrName}-${index}`}
                 >
-                  <p className="text-sm font-medium text-slate-900">{name}</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {getMemberName(currentTripMembers, idOrName)}
+                  </p>
                   <p
                     className={`text-sm font-semibold ${
                       amount >= 0 ? "text-emerald-600" : "text-rose-600"
                     }`}
                   >
                     {amount > 0 ? "+" : ""}
-                    {amount} {currency}
+                    {formatMoney(amount)} {currency}
                   </p>
                 </div>
               ))}
@@ -86,10 +93,11 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
             <Card key={`${debt.from}-${debt.to}-${index}`}>
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm font-medium text-slate-900">
-                  {debt.from} {"\u2192"} {debt.to}
+                  {getMemberName(currentTripMembers, debt.from)} {"\u2192"}{" "}
+                  {getMemberName(currentTripMembers, debt.to)}
                 </p>
                 <p className="text-lg font-semibold text-slate-900">
-                  {debt.amount} {currency}
+                  {formatMoney(debt.amount)} {currency}
                 </p>
               </div>
             </Card>

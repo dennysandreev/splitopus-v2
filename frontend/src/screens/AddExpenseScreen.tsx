@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
-import { useStore } from "../store/useStore";
+import { type TripMember, useStore } from "../store/useStore";
+import { CATEGORY_LABELS, formatMoney } from "../utils/format";
 
 interface AddExpenseScreenProps {
   tripId: string | null;
@@ -12,28 +13,61 @@ interface AddExpenseScreenProps {
 type SplitMode = "equal" | "exact";
 type ExpenseCategoryCode = "FOOD" | "TRANSPORT" | "HOME" | "SHOP" | "FUN" | "OTHER";
 
+interface MemberGroup {
+  masterId: string;
+  label: string;
+}
+
 const CATEGORY_OPTIONS: Array<{ code: ExpenseCategoryCode; label: string }> = [
-  { code: "FOOD", label: "🍔 Еда" },
-  { code: "TRANSPORT", label: "🚕 Транспорт" },
-  { code: "HOME", label: "🏠 Жилье" },
-  { code: "SHOP", label: "🛒 Магазин" },
-  { code: "FUN", label: "🎉 Развлечения" },
-  { code: "OTHER", label: "📦 Другое" },
+  { code: "FOOD", label: CATEGORY_LABELS.FOOD },
+  { code: "TRANSPORT", label: CATEGORY_LABELS.TRANSPORT },
+  { code: "HOME", label: CATEGORY_LABELS.HOME },
+  { code: "SHOP", label: CATEGORY_LABELS.SHOP },
+  { code: "FUN", label: CATEGORY_LABELS.FUN },
+  { code: "OTHER", label: CATEGORY_LABELS.OTHER },
 ];
+
+function buildMemberGroups(members: TripMember[]): MemberGroup[] {
+  const groups = new Map<string, TripMember[]>();
+
+  members.forEach((member) => {
+    const key = member.linkedTo ? String(member.linkedTo) : String(member.id);
+    const bucket = groups.get(key) ?? [];
+    bucket.push(member);
+    groups.set(key, bucket);
+  });
+
+  return Array.from(groups.entries()).map(([key, group]) => {
+    const master = group.find((m) => String(m.id) === key) ?? group[0];
+    const hasLinked = group.length > 1;
+    const label = hasLinked ? `Семья ${master.name}` : master.name;
+
+    return {
+      masterId: String(master.id),
+      label,
+    };
+  });
+}
 
 function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ExpenseCategoryCode>("OTHER");
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [selectedGroupMasterIds, setSelectedGroupMasterIds] = useState<string[]>([]);
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
+
   const user = useStore((state) => state.user);
   const currentTripMembers = useStore((state) => state.currentTripMembers);
   const addExpense = useStore((state) => state.addExpense);
   const fetchTripMembers = useStore((state) => state.fetchTripMembers);
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
+
+  const memberGroups = useMemo(
+    () => buildMemberGroups(currentTripMembers),
+    [currentTripMembers],
+  );
 
   useEffect(() => {
     if (!tripId) {
@@ -44,34 +78,34 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   }, [tripId, fetchTripMembers]);
 
   useEffect(() => {
-    if (currentTripMembers.length === 0) {
-      setSelectedMemberIds([]);
+    if (memberGroups.length === 0) {
+      setSelectedGroupMasterIds([]);
       setExactAmounts({});
       return;
     }
 
-    setSelectedMemberIds(currentTripMembers.map((member) => member.id));
+    setSelectedGroupMasterIds(memberGroups.map((group) => group.masterId));
     setExactAmounts((prev) => {
       const next: Record<string, string> = {};
-      currentTripMembers.forEach((member) => {
-        next[member.id] = prev[member.id] ?? "";
+      memberGroups.forEach((group) => {
+        next[group.masterId] = prev[group.masterId] ?? "";
       });
       return next;
     });
-  }, [currentTripMembers]);
+  }, [memberGroups]);
 
-  const toggleMember = (memberId: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(memberId)
-        ? prev.filter((id) => id !== memberId)
-        : [...prev, memberId],
+  const toggleGroup = (masterId: string) => {
+    setSelectedGroupMasterIds((prev) =>
+      prev.includes(masterId)
+        ? prev.filter((id) => id !== masterId)
+        : [...prev, masterId],
     );
   };
 
-  const updateExactAmount = (memberId: string, value: string) => {
+  const updateExactAmount = (masterId: string, value: string) => {
     setExactAmounts((prev) => ({
       ...prev,
-      [memberId]: value,
+      [masterId]: value,
     }));
   };
 
@@ -87,30 +121,31 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
       return;
     }
     if (!description.trim()) {
-      alert("Ошибка: Введите название расхода.");
+      alert("Ошибка: Введите название транзакции.");
       return;
     }
     if (Number.isNaN(normalizedAmount) || normalizedAmount <= 0) {
       alert("Ошибка: Введите корректную сумму.");
       return;
     }
+
     let split: Record<string, number> = {};
 
     if (splitMode === "equal") {
-      if (selectedMemberIds.length === 0) {
+      if (selectedGroupMasterIds.length === 0) {
         alert("Ошибка: Выберите хотя бы одного участника.");
         return;
       }
 
-      const splitAmount = normalizedAmount / selectedMemberIds.length;
+      const splitAmount = normalizedAmount / selectedGroupMasterIds.length;
       split = Object.fromEntries(
-        selectedMemberIds.map((memberId) => [memberId, splitAmount]),
+        selectedGroupMasterIds.map((masterId) => [masterId, splitAmount]),
       );
     } else {
       const exactSplit = Object.fromEntries(
-        currentTripMembers.map((member) => {
-          const value = Number(exactAmounts[member.id] ?? "");
-          return [member.id, Number.isFinite(value) && value > 0 ? value : 0];
+        memberGroups.map((group) => {
+          const value = Number(exactAmounts[group.masterId] ?? "");
+          return [group.masterId, Number.isFinite(value) && value > 0 ? value : 0];
         }),
       ) as Record<string, number>;
 
@@ -147,7 +182,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar onBack={onBack} title="Новый расход" />
+      <Navbar onBack={onBack} title="Новая транзакция" />
       <main className="p-4">
         <Card className="space-y-4">
           <div className="space-y-1.5">
@@ -159,6 +194,7 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
               id="amount"
               onChange={(event) => setAmount(event.target.value)}
               placeholder="Например, 1500"
+              step="0.1"
               type="number"
               value={amount}
             />
@@ -198,12 +234,13 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
 
           <div className="space-y-2">
             <p className="text-sm text-slate-600">Участники</p>
-            {loading && currentTripMembers.length === 0 ? (
+            {loading && memberGroups.length === 0 ? (
               <p className="text-sm text-slate-500">Загрузка участников...</p>
             ) : null}
-            {error && currentTripMembers.length === 0 ? (
+            {error && memberGroups.length === 0 ? (
               <p className="text-sm text-rose-600">{error}</p>
             ) : null}
+
             <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
               <button
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -228,60 +265,61 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
                 Точная сумма
               </button>
             </div>
+
             <div className="space-y-2">
               {splitMode === "equal"
-                ? currentTripMembers.map((member) => (
+                ? memberGroups.map((group) => (
                     <label
                       className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
-                      htmlFor={`member-${member.id}`}
-                      key={member.id}
+                      htmlFor={`member-${group.masterId}`}
+                      key={group.masterId}
                     >
                       <input
-                        checked={selectedMemberIds.includes(member.id)}
-                        id={`member-${member.id}`}
-                        onChange={() => toggleMember(member.id)}
+                        checked={selectedGroupMasterIds.includes(group.masterId)}
+                        id={`member-${group.masterId}`}
+                        onChange={() => toggleGroup(group.masterId)}
                         type="checkbox"
                       />
-                      <span className="text-sm text-slate-900">{member.name}</span>
+                      <span className="text-sm text-slate-900">{group.label}</span>
                     </label>
                   ))
-                : currentTripMembers.map((member) => (
+                : memberGroups.map((group) => (
                     <div
                       className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
-                      key={member.id}
+                      key={group.masterId}
                     >
                       <span className="min-w-0 flex-1 text-sm text-slate-900">
-                        {member.name}
+                        {group.label}
                       </span>
                       <input
                         className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-base text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         onChange={(event) =>
-                          updateExactAmount(member.id, event.target.value)
+                          updateExactAmount(group.masterId, event.target.value)
                         }
                         placeholder="0"
-                        step="0.01"
+                        step="0.1"
                         type="number"
-                        value={exactAmounts[member.id] ?? ""}
+                        value={exactAmounts[group.masterId] ?? ""}
                       />
                     </div>
                   ))}
             </div>
-            {splitMode === "equal" && selectedMemberIds.length > 0 && amount ? (
+
+            {splitMode === "equal" && selectedGroupMasterIds.length > 0 && amount ? (
               <p className="text-xs text-slate-500">
-                По {(
-                  Number(amount) / selectedMemberIds.length || 0
-                ).toFixed(2)}{" "}
-                каждому
+                По {formatMoney(Number(amount) / selectedGroupMasterIds.length || 0)} каждому
               </p>
             ) : null}
             {splitMode === "exact" ? (
               <p className="text-xs text-slate-500">
                 Сумма долей:{" "}
-                {Object.values(exactAmounts).reduce((sum, value) => {
-                  const num = Number(value);
-                  return sum + (Number.isFinite(num) ? num : 0);
-                }, 0).toFixed(2)}{" "}
-                / {Number(amount || 0).toFixed(2)}
+                {formatMoney(
+                  Object.values(exactAmounts).reduce((sum, value) => {
+                    const num = Number(value);
+                    return sum + (Number.isFinite(num) ? num : 0);
+                  }, 0),
+                )}{" "}
+                / {formatMoney(Number(amount || 0))}
               </p>
             ) : null}
           </div>

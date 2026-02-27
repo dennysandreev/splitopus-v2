@@ -121,6 +121,7 @@ export interface Trip {
 export interface TripMember {
   id: string;
   name: string;
+  linkedTo?: string | null;
 }
 
 interface TripDto {
@@ -140,6 +141,7 @@ interface GetTripsResponse {
 interface TripMemberDto {
   id: string;
   name: string;
+  linked_to?: string | null;
 }
 
 interface GetTripMembersResponse {
@@ -168,6 +170,7 @@ interface StoreState {
   addNote: (tripId: string, text: string) => Promise<void>;
   fetchStats: (tripId: string) => Promise<void>;
   fetchTrips: () => Promise<void>;
+  createTrip: (name: string, currency: string) => Promise<void>;
   fetchTripMembers: (tripId: string) => Promise<void>;
 }
 
@@ -211,6 +214,7 @@ function mapTripMember(dto: TripMemberDto): TripMember {
   return {
     id: String(dto.id),
     name: dto.name,
+    linkedTo: dto.linked_to ? String(dto.linked_to) : null,
   };
 }
 
@@ -313,6 +317,41 @@ export const useStore = create<StoreState>((set, get) => ({
         loading: false,
         error: null,
       });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+
+  createTrip: async (name, currency) => {
+    const { user } = get();
+    if (!user?.id) {
+      set({ error: "User is not authorized" });
+      return;
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/trips`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          currency,
+          user_id: String(user.id),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create trip: ${response.status}`);
+      }
+
+      await get().fetchTrips();
     } catch (error) {
       set({
         loading: false,
@@ -504,8 +543,20 @@ export const useStore = create<StoreState>((set, get) => ({
       }
 
       const data = (await response.json()) as GetTripMembersResponse;
+      const currentUser = get().user;
       set({
-        currentTripMembers: data.members.map(mapTripMember),
+        currentTripMembers: data.members.map((member) => {
+          const mapped = mapTripMember(member);
+          if (
+            currentUser &&
+            String(mapped.id) === String(currentUser.id) &&
+            (mapped.name === "User" || mapped.name === "Unknown")
+          ) {
+            return { ...mapped, name: currentUser.firstName };
+          }
+
+          return mapped;
+        }),
         loading: false,
         error: null,
       });
