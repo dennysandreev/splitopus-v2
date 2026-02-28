@@ -7,9 +7,10 @@ import { useStore } from "../store/useStore";
 interface NotesScreenProps {
   tripId: string;
   onBack: () => void;
+  onOpenSettings: () => void;
 }
 
-function NotesScreen({ tripId, onBack }: NotesScreenProps) {
+function NotesScreen({ tripId, onBack, onOpenSettings }: NotesScreenProps) {
   const [text, setText] = useState("");
   const notes = useStore((state) => state.notes);
   const loading = useStore((state) => state.loading);
@@ -24,54 +25,50 @@ function NotesScreen({ tripId, onBack }: NotesScreenProps) {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed) return;
 
     await addNote(tripId, trimmed);
     setText("");
   };
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <header className="flex-none z-10 bg-slate-50">
-        <Navbar onBack={onBack} title="Заметки" />
+    <div className="app-shell">
+      <header className="app-header">
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Notes" />
       </header>
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
-        {loading ? <p className="text-sm text-slate-500">Загрузка заметок...</p> : null}
-        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
-        <section className="space-y-3">
+      <main className="app-main pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
+        <div className="space-y-3">
           {notes.map((note) => (
             <Card key={note.id}>
-              <p className="text-sm text-slate-900">{note.text}</p>
-              <p className="mt-2 text-xs text-slate-500">{note.author}</p>
+              <p className="text-sm text-textMain">{note.text}</p>
+              <p className="mt-2 text-xs text-textMuted">{note.author}</p>
             </Card>
           ))}
           {!loading && notes.length === 0 ? (
             <Card>
-              <p className="text-sm text-slate-500">Заметок пока нет</p>
+              <p className="text-sm text-textMuted">Заметок пока нет</p>
             </Card>
           ) : null}
-        </section>
+          {loading ? <p className="text-sm text-textMuted">Загрузка заметок...</p> : null}
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
         </div>
       </main>
 
       <form
-        className="flex-none border-t border-slate-200 bg-white px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="flex-none border-t border-borderSoft bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
         onSubmit={handleSubmit}
       >
-        <div className="mx-auto flex max-w-3xl items-center gap-2">
+        <div className="flex items-center gap-2">
           <input
-            className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+            className="input-premium flex-1"
             onChange={(event) => setText(event.target.value)}
             placeholder="Написать заметку..."
             type="text"
             value={text}
           />
           <Button disabled={loading} type="submit">
-            Добавить
+            Add
           </Button>
         </div>
       </form>

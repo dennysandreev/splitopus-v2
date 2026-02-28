@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import WebApp from "@twa-dev/sdk";
 import AddExpenseScreen from "./screens/AddExpenseScreen";
+import AuthFallbackScreen from "./screens/AuthFallbackScreen";
 import DebtsScreen from "./screens/DebtsScreen";
 import ExpenseDetailsScreen from "./screens/ExpenseDetailsScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
 import GroupsScreen from "./screens/GroupsScreen";
+import JoinTripScreen from "./screens/JoinTripScreen";
 import NotesScreen from "./screens/NotesScreen";
 import RouletteScreen from "./screens/RouletteScreen";
+import SettingsScreen from "./screens/SettingsScreen";
+import SplashScreen from "./screens/SplashScreen";
 import StatsScreen from "./screens/StatsScreen";
 import { useStore } from "./store/useStore";
 
@@ -18,13 +22,18 @@ type ScreenName =
   | "expenseDetails"
   | "stats"
   | "notes"
-  | "roulette";
+  | "roulette"
+  | "joinTrip"
+  | "settings";
 
 function App() {
+  const [isSplashVisible, setIsSplashVisible] = useState(true);
   const [screen, setScreen] = useState<ScreenName>("groups");
+  const [lastScreen, setLastScreen] = useState<ScreenName>("groups");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+
   const groups = useStore((state) => state.groups);
   const fetchTrips = useStore((state) => state.fetchTrips);
   const initUser = useStore((state) => state.initUser);
@@ -36,109 +45,130 @@ function App() {
     setAuthInitialized(true);
     WebApp.ready();
     WebApp.expand();
+
+    const splashTimer = window.setTimeout(() => {
+      setIsSplashVisible(false);
+    }, 900);
+
+    return () => window.clearTimeout(splashTimer);
   }, [initUser]);
 
   useEffect(() => {
     if (user) {
-      fetchTrips();
+      void fetchTrips();
     }
   }, [user, fetchTrips]);
 
-  const openGroupDetails = (groupId: string) => {
-    setSelectedGroupId(groupId);
-    setScreen("groupDetails");
+  const navigate = (nextScreen: ScreenName) => {
+    if (nextScreen !== "settings") {
+      setLastScreen(nextScreen);
+    }
+    setScreen(nextScreen);
   };
 
-  const goToGroups = () => {
-    setScreen("groups");
+  const openSettings = () => {
+    setLastScreen(screen);
+    setScreen("settings");
   };
 
-  const goToAddExpense = () => {
-    setScreen("addExpense");
-  };
+  if (isSplashVisible) {
+    return <SplashScreen onOpenSettings={openSettings} />;
+  }
 
-  const goToDebts = () => {
-    setScreen("debts");
-  };
-
-  const goToExpenseDetails = (expenseId: string) => {
-    setSelectedExpenseId(expenseId);
-    setScreen("expenseDetails");
-  };
-
-  const goToStats = () => {
-    setScreen("stats");
-  };
-
-  const goToNotes = () => {
-    setScreen("notes");
-  };
-
-  const goToRoulette = () => {
-    setScreen("roulette");
-  };
+  if (authInitialized && user === null && !loading) {
+    return <AuthFallbackScreen onOpenSettings={openSettings} />;
+  }
 
   const addExpenseGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
-  if (authInitialized && user === null && !loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <div className="mx-auto mt-16 max-w-md rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
-          <h1 className="text-xl font-semibold text-slate-900">Splitopus 🐙</h1>
-          <p className="mt-3 text-sm text-slate-600">
-            Пожалуйста, откройте приложение через Telegram.
-          </p>
-          <a
-            className="mt-5 inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm"
-            href="https://t.me/SplitopusBot"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Открыть бота
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-slate-50">
-      {screen === "groups" ? <GroupsScreen onSelectGroup={openGroupDetails} /> : null}
+    <div className="mx-auto h-screen max-w-xl overflow-hidden bg-app-gradient md:my-4 md:h-[calc(100vh-2rem)] md:rounded-screen md:border md:border-borderSoft md:shadow-card">
+      {screen === "groups" ? (
+        <GroupsScreen
+          onOpenJoinTrip={() => navigate("joinTrip")}
+          onOpenSettings={openSettings}
+          onSelectGroup={(groupId) => {
+            setSelectedGroupId(groupId);
+            navigate("groupDetails");
+          }}
+        />
+      ) : null}
+
       {screen === "groupDetails" && selectedGroupId ? (
         <GroupDetailsScreen
+          onBack={() => navigate("groups")}
+          onOpenAddExpense={() => navigate("addExpense")}
+          onOpenDebts={() => navigate("debts")}
+          onOpenExpense={(expenseId) => {
+            setSelectedExpenseId(expenseId);
+            navigate("expenseDetails");
+          }}
+          onOpenNotes={() => navigate("notes")}
+          onOpenRoulette={() => navigate("roulette")}
+          onOpenSettings={openSettings}
+          onOpenStats={() => navigate("stats")}
           tripId={selectedGroupId}
-          onBack={goToGroups}
-          onOpenDebts={goToDebts}
-          onOpenStats={goToStats}
-          onOpenNotes={goToNotes}
-          onOpenRoulette={goToRoulette}
-          onOpenAddExpense={goToAddExpense}
-          onOpenExpense={goToExpenseDetails}
         />
       ) : null}
+
       {screen === "addExpense" ? (
         <AddExpenseScreen
+          onBack={() => navigate(selectedGroupId ? "groupDetails" : "groups")}
+          onOpenSettings={openSettings}
           tripId={addExpenseGroupId}
-          onBack={() => setScreen(selectedGroupId ? "groupDetails" : "groups")}
         />
       ) : null}
+
       {screen === "debts" && selectedGroupId ? (
-        <DebtsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+        <DebtsScreen
+          onBack={() => navigate("groupDetails")}
+          onOpenSettings={openSettings}
+          tripId={selectedGroupId}
+        />
       ) : null}
+
       {screen === "expenseDetails" && selectedExpenseId ? (
         <ExpenseDetailsScreen
           expenseId={selectedExpenseId}
-          onBack={() => setScreen("groupDetails")}
+          onBack={() => navigate("groupDetails")}
+          onOpenSettings={openSettings}
         />
       ) : null}
+
       {screen === "stats" && selectedGroupId ? (
-        <StatsScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+        <StatsScreen
+          onBack={() => navigate("groupDetails")}
+          onOpenSettings={openSettings}
+          tripId={selectedGroupId}
+        />
       ) : null}
+
       {screen === "notes" && selectedGroupId ? (
-        <NotesScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+        <NotesScreen
+          onBack={() => navigate("groupDetails")}
+          onOpenSettings={openSettings}
+          tripId={selectedGroupId}
+        />
       ) : null}
+
       {screen === "roulette" && selectedGroupId ? (
-        <RouletteScreen tripId={selectedGroupId} onBack={() => setScreen("groupDetails")} />
+        <RouletteScreen
+          onBack={() => navigate("groupDetails")}
+          onOpenSettings={openSettings}
+          tripId={selectedGroupId}
+        />
+      ) : null}
+
+      {screen === "joinTrip" ? (
+        <JoinTripScreen onBack={() => navigate("groups")} onOpenSettings={openSettings} />
+      ) : null}
+
+      {screen === "settings" ? (
+        <SettingsScreen
+          onBack={() => {
+            setScreen(lastScreen);
+          }}
+        />
       ) : null}
     </div>
   );

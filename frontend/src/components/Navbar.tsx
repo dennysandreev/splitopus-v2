@@ -1,19 +1,47 @@
-import Button from "./Button";
+import { hapticLight } from "../utils/haptics";
 
 interface NavbarProps {
   title: string;
   onBack?: () => void;
+  onSettings?: () => void;
 }
 
-function Navbar({ title, onBack }: NavbarProps) {
+function Navbar({ title, onBack, onSettings }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-3 bg-white/90 p-4 backdrop-blur-sm">
-      {onBack ? (
-        <Button onClick={onBack} variant="secondary">
-          Назад
-        </Button>
-      ) : null}
-      <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
+    <header className="flex items-center justify-between px-4 py-3">
+      <div className="flex w-10 items-center justify-start">
+        {onBack ? (
+          <button
+            aria-label="Назад"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borderSoft bg-white text-textMain"
+            onClick={() => {
+              hapticLight();
+              onBack();
+            }}
+            type="button"
+          >
+            ←
+          </button>
+        ) : null}
+      </div>
+      <h1 className="truncate px-2 text-base font-semibold text-textMain">{title}</h1>
+      <div className="flex w-10 items-center justify-end">
+        {onSettings ? (
+          <button
+            aria-label="Настройки"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-borderSoft bg-white text-textMain"
+            onClick={() => {
+              hapticLight();
+              onSettings();
+            }}
+            type="button"
+          >
+            ⚙
+          </button>
+        ) : (
+          <span className="inline-flex h-9 w-9" />
+        )}
+      </div>
     </header>
   );
 }

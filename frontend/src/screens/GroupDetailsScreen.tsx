@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import WebApp from "@twa-dev/sdk";
+import Button from "../components/Button";
 import Card from "../components/Card";
 import Navbar from "../components/Navbar";
 import { useStore } from "../store/useStore";
 import { CATEGORY_LABELS, formatMoney } from "../utils/format";
+import { hapticLight } from "../utils/haptics";
 import { getMemberName } from "../utils/members";
 
 interface GroupDetailsScreenProps {
@@ -15,6 +17,7 @@ interface GroupDetailsScreenProps {
   onOpenRoulette: () => void;
   onOpenAddExpense: () => void;
   onOpenExpense: (expenseId: string) => void;
+  onOpenSettings: () => void;
 }
 
 function GroupDetailsScreen({
@@ -26,6 +29,7 @@ function GroupDetailsScreen({
   onOpenRoulette,
   onOpenAddExpense,
   onOpenExpense,
+  onOpenSettings,
 }: GroupDetailsScreenProps) {
   const [filterUser, setFilterUser] = useState<string | null>(null);
   const expenses = useStore((state) => state.expenses);
@@ -44,10 +48,11 @@ function GroupDetailsScreen({
     void fetchTripMembers(tripId);
   }, [tripId, fetchExpenses, fetchDebts, fetchTripMembers]);
 
-  const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const trip = groups.find((group) => group.id === tripId);
-  const currency = trip?.currency ?? "₽";
+  const currency = trip?.currency ?? "THB";
   const myBalance = user ? balances?.[String(user.id)] || 0 : 0;
+  const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
   const filteredExpenses = useMemo(() => {
     if (!filterUser) {
       return expenses;
@@ -60,6 +65,8 @@ function GroupDetailsScreen({
     if (!trip?.code || !trip?.name) {
       return;
     }
+
+    hapticLight();
     const botStartLink = `https://t.me/SplitopusBot?start=${trip.code}`;
     const shareText = encodeURIComponent(
       `Присоединяйся к поездке "${trip.name}" в Splitopus! 🌴\nКод: ${trip.code}\n👉 ${botStartLink}`,
@@ -69,159 +76,136 @@ function GroupDetailsScreen({
   };
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <div className="flex-none z-10 bg-white">
-        <Navbar onBack={onBack} title="Детали поездки" />
-        <div className="px-4 pb-4">
-          <div className="bg-white">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-lg font-semibold text-slate-900">
-                  {trip?.name ?? "Поездка"}
-                </p>
-              </div>
-              <div className="text-right">
-                <button
-                  className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm text-slate-600 hover:bg-slate-200"
-                  onClick={handleShare}
-                  type="button"
-                >
-                  🔗
-                </button>
-                <p className="text-xs text-slate-500">Мой баланс</p>
-                <p
-                  className={`text-2xl font-semibold leading-tight ${
-                    myBalance >= 0 ? "text-emerald-600" : "text-rose-600"
-                  }`}
-                >
-                  {myBalance > 0 ? "+" : ""}
-                  {formatMoney(myBalance)} {currency}
-                </p>
-              </div>
-            </div>
+    <div className="app-shell">
+      <header className="app-header">
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Trip Dashboard" />
+      </header>
 
-            <p className="mt-2 text-xs text-slate-500">
-              Всего в поездке: {formatMoney(totalSpent)} {currency}
+      <main className="app-main pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
+        <Card className="relative overflow-hidden p-5">
+          <div className="pointer-events-none absolute inset-0 bg-hero-tint" />
+          <div className="relative">
+            <p className="text-sm font-medium text-textMuted">My Balance</p>
+            <p
+              className={`mt-1 text-4xl font-bold tracking-tight ${
+                myBalance >= 0 ? "text-success" : "text-danger"
+              }`}
+            >
+              {myBalance > 0 ? "+" : ""}
+              {formatMoney(myBalance)} {currency}
+            </p>
+            <p className="mt-2 text-sm text-textMuted">
+              Total spent: {formatMoney(totalSpent)} {currency}
             </p>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
-                onClick={onOpenStats}
-                type="button"
-              >
-                📊 Статистика
-              </button>
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
-                onClick={onOpenDebts}
-                type="button"
-              >
-                ⚖️ Баланс
-              </button>
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
-                onClick={onOpenNotes}
-                type="button"
-              >
-                📝 Заметки
-              </button>
-              <button
-                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
-                onClick={onOpenRoulette}
-                type="button"
-              >
-                🎲 Рулетка
-              </button>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <Button className="h-14 text-base" onClick={onOpenStats} variant="secondary">
+                📊 Stats
+              </Button>
+              <Button className="h-14 text-base" onClick={onOpenDebts} variant="secondary">
+                ⚖️ Debts
+              </Button>
+              <Button className="h-14 text-base" onClick={onOpenNotes} variant="secondary">
+                📝 Notes
+              </Button>
+              <Button className="h-14 text-base" onClick={onOpenRoulette} variant="secondary">
+                🎲 Roulette
+              </Button>
             </div>
 
-            <button
-              className="mt-4 w-full rounded-xl bg-slate-900 py-3 text-sm font-medium text-white shadow-sm transition-transform active:scale-[0.98]"
-              onClick={onOpenAddExpense}
-              type="button"
-            >
-              Добавить транзакцию
-            </button>
+            <div className="mt-4 flex justify-center">
+              <Button className="h-9 px-4 text-xs" onClick={handleShare} variant="ghost">
+                Share Trip
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </Card>
 
-      <main className="flex-1 overflow-y-auto bg-slate-50 px-4 pb-4">
-        <section className="space-y-3 pt-2">
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            className={`chip-pill shrink-0 ${
+              filterUser === null
+                ? "bg-primary text-white"
+                : "bg-white text-textMuted border border-borderSoft"
+            }`}
+            onClick={() => {
+              hapticLight();
+              setFilterUser(null);
+            }}
+            type="button"
+          >
+            All
+          </button>
+          {currentTripMembers.map((member) => (
             <button
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                filterUser === null
-                  ? "bg-slate-800 text-white"
-                  : "bg-slate-200 text-slate-600"
+              className={`chip-pill shrink-0 ${
+                filterUser === String(member.id)
+                  ? "bg-primary text-white"
+                  : "bg-white text-textMuted border border-borderSoft"
               }`}
-              onClick={() => setFilterUser(null)}
+              key={member.id}
+              onClick={() => {
+                hapticLight();
+                setFilterUser(String(member.id));
+              }}
               type="button"
             >
-              Все
+              {member.name}
             </button>
-            {currentTripMembers.map((member) => (
-              <button
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  filterUser === String(member.id)
-                    ? "bg-slate-800 text-white"
-                    : "bg-slate-200 text-slate-600"
-                }`}
-                key={member.id}
-                onClick={() => setFilterUser(String(member.id))}
-                type="button"
-              >
-                {member.name}
-              </button>
-            ))}
-          </div>
+          ))}
+        </div>
 
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-1">
-            Последние оплаты
+        <div className="mt-4 space-y-3">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-textMuted">
+            Latest Transactions
           </h2>
-          
-          {loading ? <p className="text-sm text-slate-500 pl-1">Загрузка...</p> : null}
-          
-          <div className="space-y-2">
-            {filteredExpenses.map((expense) => (
-              <button
-                className="w-full text-left"
-                key={expense.id}
-                onClick={() => onOpenExpense(expense.id)}
-                type="button"
-              >
-                <Card className="rounded-xl p-3 transition-colors hover:bg-slate-50 border border-slate-100 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900 line-clamp-1">
-                        {expense.description}
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                         <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
-                           {CATEGORY_LABELS[expense.category] ?? expense.category}
-                         </span>
-                         <span className="text-xs text-slate-400">•</span>
-                         <span className="text-xs text-slate-500">
-                           {getMemberName(currentTripMembers, expense.payerId)}
-                         </span>
-                      </div>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-700 whitespace-nowrap">
-                      {formatMoney(expense.amount)} {currency}
+
+          {loading ? <p className="px-1 text-sm text-textMuted">Loading...</p> : null}
+
+          {filteredExpenses.map((expense) => (
+            <button
+              className="w-full text-left"
+              key={expense.id}
+              onClick={() => {
+                hapticLight();
+                onOpenExpense(expense.id);
+              }}
+              type="button"
+            >
+              <Card className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-textMain">
+                      {expense.description}
+                    </p>
+                    <p className="mt-1 text-xs text-textMuted">
+                      {CATEGORY_LABELS[expense.category] ?? expense.category} ·{" "}
+                      {getMemberName(currentTripMembers, expense.payerId)}
                     </p>
                   </div>
-                </Card>
-              </button>
-            ))}
-          </div>
-          
+                  <p className="shrink-0 text-sm font-semibold text-textMain">
+                    {formatMoney(expense.amount)} {currency}
+                  </p>
+                </div>
+              </Card>
+            </button>
+          ))}
+
           {!loading && filteredExpenses.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-slate-400">Здесь пока пусто</p>
-            </div>
+            <Card>
+              <p className="text-center text-sm text-textMuted">No transactions yet</p>
+            </Card>
           ) : null}
-        </section>
+        </div>
       </main>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 mx-auto w-full max-w-xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto">
+          <Button className="w-full" onClick={onOpenAddExpense}>
+            Add Expense
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

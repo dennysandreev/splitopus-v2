@@ -8,17 +8,11 @@ import { CATEGORY_LABELS, formatMoney } from "../utils/format";
 interface AddExpenseScreenProps {
   tripId: string | null;
   onBack: () => void;
+  onOpenSettings: () => void;
 }
 
 type SplitMode = "equal" | "exact";
-type ExpenseCategoryCode =
-  | "FOOD"
-  | "ALCOHOL"
-  | "TRANSPORT"
-  | "SHOP"
-  | "FUN"
-  | "HOME"
-  | "OTHER";
+type ExpenseCategoryCode = "FOOD" | "ALCOHOL" | "TRANSPORT" | "SHOP" | "FUN" | "HOME" | "OTHER";
 
 interface MemberGroup {
   masterId: string;
@@ -46,18 +40,15 @@ function buildMemberGroups(members: TripMember[]): MemberGroup[] {
   });
 
   return Array.from(groups.entries()).map(([key, group]) => {
-    const master = group.find((m) => String(m.id) === key) ?? group[0];
-    const hasLinked = group.length > 1;
-    const label = hasLinked ? `Семья ${master.name}` : master.name;
-
+    const master = group.find((item) => String(item.id) === key) ?? group[0];
     return {
       masterId: String(master.id),
-      label,
+      label: group.length > 1 ? `Семья ${master.name}` : master.name,
     };
   });
 }
 
-function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
+function AddExpenseScreen({ tripId, onBack, onOpenSettings }: AddExpenseScreenProps) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ExpenseCategoryCode>("OTHER");
@@ -70,19 +61,13 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   const addExpense = useStore((state) => state.addExpense);
   const fetchTripMembers = useStore((state) => state.fetchTripMembers);
   const loading = useStore((state) => state.loading);
-  const error = useStore((state) => state.error);
 
-  const memberGroups = useMemo(
-    () => buildMemberGroups(currentTripMembers),
-    [currentTripMembers],
-  );
+  const memberGroups = useMemo(() => buildMemberGroups(currentTripMembers), [currentTripMembers]);
 
   useEffect(() => {
-    if (!tripId) {
-      return;
+    if (tripId) {
+      void fetchTripMembers(tripId);
     }
-
-    void fetchTripMembers(tripId);
   }, [tripId, fetchTripMembers]);
 
   useEffect(() => {
@@ -102,53 +87,20 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
     });
   }, [memberGroups]);
 
-  const toggleGroup = (masterId: string) => {
-    setSelectedGroupMasterIds((prev) =>
-      prev.includes(masterId)
-        ? prev.filter((id) => id !== masterId)
-        : [...prev, masterId],
-    );
-  };
-
-  const updateExactAmount = (masterId: string, value: string) => {
-    setExactAmounts((prev) => ({
-      ...prev,
-      [masterId]: value,
-    }));
-  };
-
   const handleSave = async () => {
     const normalizedAmount = Number(amount);
 
-    if (!tripId) {
-      alert("Ошибка: Не выбрана поездка (группа).");
-      return;
-    }
-    if (!user) {
-      alert("Ошибка: Пользователь не авторизован.");
-      return;
-    }
-    if (!description.trim()) {
-      alert("Ошибка: Введите название транзакции.");
-      return;
-    }
-    if (Number.isNaN(normalizedAmount) || normalizedAmount <= 0) {
-      alert("Ошибка: Введите корректную сумму.");
-      return;
-    }
+    if (!tripId) return alert("Не выбрана поездка");
+    if (!user) return alert("Пользователь не авторизован");
+    if (!description.trim()) return alert("Введите название");
+    if (Number.isNaN(normalizedAmount) || normalizedAmount <= 0) return alert("Введите корректную сумму");
 
     let split: Record<string, number> = {};
 
     if (splitMode === "equal") {
-      if (selectedGroupMasterIds.length === 0) {
-        alert("Ошибка: Выберите хотя бы одного участника.");
-        return;
-      }
-
+      if (selectedGroupMasterIds.length === 0) return alert("Выберите участников");
       const splitAmount = normalizedAmount / selectedGroupMasterIds.length;
-      split = Object.fromEntries(
-        selectedGroupMasterIds.map((masterId) => [masterId, splitAmount]),
-      );
+      split = Object.fromEntries(selectedGroupMasterIds.map((id) => [id, splitAmount]));
     } else {
       const exactSplit = Object.fromEntries(
         memberGroups.map((group) => {
@@ -157,23 +109,18 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
         }),
       ) as Record<string, number>;
 
-      const exactTotal = Object.values(exactSplit).reduce((sum, value) => sum + value, 0);
-      const roundedExactTotal = Number(exactTotal.toFixed(2));
-      const roundedTarget = Number(normalizedAmount.toFixed(2));
-
-      if (roundedExactTotal !== roundedTarget) {
-        alert("Ошибка: Сумма точных долей должна совпадать с общей суммой.");
-        return;
-      }
-
-      split = Object.fromEntries(
-        Object.entries(exactSplit).filter(([, value]) => value > 0),
+      const exactTotal = Number(
+        Object.values(exactSplit)
+          .reduce((sum, value) => sum + value, 0)
+          .toFixed(2),
       );
 
-      if (Object.keys(split).length === 0) {
-        alert("Ошибка: Укажите хотя бы одну долю.");
-        return;
+      if (exactTotal !== Number(normalizedAmount.toFixed(2))) {
+        return alert("Сумма долей должна совпадать с общей суммой");
       }
+
+      split = Object.fromEntries(Object.entries(exactSplit).filter(([, value]) => value > 0));
+      if (Object.keys(split).length === 0) return alert("Укажите хотя бы одну долю");
     }
 
     await addExpense({
@@ -189,47 +136,48 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <header className="flex-none z-10 bg-slate-50">
-        <Navbar onBack={onBack} title="Новая транзакция" />
+    <div className="app-shell">
+      <header className="app-header">
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Add Expense" />
       </header>
-      <main className="flex-1 overflow-y-auto p-4">
-        <Card className="space-y-4 rounded-2xl">
-          <div className="space-y-1.5">
-            <label className="text-sm text-slate-600" htmlFor="amount">
+
+      <main className="app-main pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <Card className="space-y-4 p-5">
+          <div>
+            <label className="mb-1.5 block text-sm text-textMuted" htmlFor="amount">
               Сумма
             </label>
             <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              className="input-premium"
               id="amount"
               onChange={(event) => setAmount(event.target.value)}
-              placeholder="Например, 1500"
+              placeholder="1500"
               step="0.1"
               type="number"
               value={amount}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm text-slate-600" htmlFor="description">
+          <div>
+            <label className="mb-1.5 block text-sm text-textMuted" htmlFor="description">
               Название
             </label>
             <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              className="input-premium"
               id="description"
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Например, Ужин"
+              placeholder="Ужин"
               type="text"
               value={description}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm text-slate-600" htmlFor="category">
+          <div>
+            <label className="mb-1.5 block text-sm text-textMuted" htmlFor="category">
               Категория
             </label>
             <select
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base text-slate-900 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+              className="input-premium"
               id="category"
               onChange={(event) => setCategory(event.target.value as ExpenseCategoryCode)}
               value={category}
@@ -242,21 +190,11 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
             </select>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-sm text-slate-600">Участники</p>
-            {loading && memberGroups.length === 0 ? (
-              <p className="text-sm text-slate-500">Загрузка участников...</p>
-            ) : null}
-            {error && memberGroups.length === 0 ? (
-              <p className="text-sm text-rose-600">{error}</p>
-            ) : null}
-
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+          <div className="rounded-input bg-primary/5 p-1">
+            <div className="flex gap-2">
               <button
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  splitMode === "equal"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600"
+                className={`flex-1 rounded-input px-3 py-2 text-sm font-medium ${
+                  splitMode === "equal" ? "bg-white text-textMain" : "text-textMuted"
                 }`}
                 onClick={() => setSplitMode("equal")}
                 type="button"
@@ -264,10 +202,8 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
                 Поровну
               </button>
               <button
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  splitMode === "exact"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600"
+                className={`flex-1 rounded-input px-3 py-2 text-sm font-medium ${
+                  splitMode === "exact" ? "bg-white text-textMain" : "text-textMuted"
                 }`}
                 onClick={() => setSplitMode("exact")}
                 type="button"
@@ -275,64 +211,70 @@ function AddExpenseScreen({ tripId, onBack }: AddExpenseScreenProps) {
                 Точная сумма
               </button>
             </div>
-
-            <div className="space-y-2">
-              {splitMode === "equal"
-                ? memberGroups.map((group) => (
-                    <label
-                      className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
-                      htmlFor={`member-${group.masterId}`}
-                      key={group.masterId}
-                    >
-                      <input
-                        checked={selectedGroupMasterIds.includes(group.masterId)}
-                        id={`member-${group.masterId}`}
-                        onChange={() => toggleGroup(group.masterId)}
-                        type="checkbox"
-                      />
-                      <span className="text-sm text-slate-900">{group.label}</span>
-                    </label>
-                  ))
-                : memberGroups.map((group) => (
-                    <div
-                      className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2"
-                      key={group.masterId}
-                    >
-                      <span className="min-w-0 flex-1 text-sm text-slate-900">
-                        {group.label}
-                      </span>
-                      <input
-                        className="w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-base text-slate-900 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                        onChange={(event) =>
-                          updateExactAmount(group.masterId, event.target.value)
-                        }
-                        placeholder="0"
-                        step="0.1"
-                        type="number"
-                        value={exactAmounts[group.masterId] ?? ""}
-                      />
-                    </div>
-                  ))}
-            </div>
-
-            {splitMode === "equal" && selectedGroupMasterIds.length > 0 && amount ? (
-              <p className="text-xs text-slate-500">
-                По {formatMoney(Number(amount) / selectedGroupMasterIds.length || 0)} каждому
-              </p>
-            ) : null}
-            {splitMode === "exact" ? (
-              <p className="text-xs text-slate-500">
-                Сумма долей:{" "}
-                {formatMoney(
-                  Object.values(exactAmounts).reduce((sum, value) => {
-                    const num = Number(value);
-                    return sum + (Number.isFinite(num) ? num : 0);
-                  }, 0),
-                )}{" "}
-                / {formatMoney(Number(amount || 0))}
-              </p>
-            ) : null}
           </div>
+
+          <div className="space-y-2">
+            {splitMode === "equal"
+              ? memberGroups.map((group) => (
+                  <label
+                    className="flex items-center gap-3 rounded-input border border-borderSoft bg-white px-3 py-2"
+                    htmlFor={`member-${group.masterId}`}
+                    key={group.masterId}
+                  >
+                    <input
+                      checked={selectedGroupMasterIds.includes(group.masterId)}
+                      id={`member-${group.masterId}`}
+                      onChange={() =>
+                        setSelectedGroupMasterIds((prev) =>
+                          prev.includes(group.masterId)
+                            ? prev.filter((id) => id !== group.masterId)
+                            : [...prev, group.masterId],
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    <span className="text-sm text-textMain">{group.label}</span>
+                  </label>
+                ))
+              : memberGroups.map((group) => (
+                  <div
+                    className="flex items-center gap-3 rounded-input border border-borderSoft bg-white px-3 py-2"
+                    key={group.masterId}
+                  >
+                    <span className="flex-1 text-sm text-textMain">{group.label}</span>
+                    <input
+                      className="w-28 rounded-input border border-borderSoft px-2 py-1.5 text-right text-base text-textMain"
+                      onChange={(event) =>
+                        setExactAmounts((prev) => ({
+                          ...prev,
+                          [group.masterId]: event.target.value,
+                        }))
+                      }
+                      placeholder="0"
+                      step="0.1"
+                      type="number"
+                      value={exactAmounts[group.masterId] ?? ""}
+                    />
+                  </div>
+                ))}
+          </div>
+
+          {splitMode === "equal" && selectedGroupMasterIds.length > 0 && amount ? (
+            <p className="text-xs text-textMuted">
+              По {formatMoney(Number(amount) / selectedGroupMasterIds.length || 0)} каждому
+            </p>
+          ) : null}
+
+          {splitMode === "exact" ? (
+            <p className="text-xs text-textMuted">
+              Сумма долей: {formatMoney(
+                Object.values(exactAmounts).reduce((sum, value) => {
+                  const num = Number(value);
+                  return sum + (Number.isFinite(num) ? num : 0);
+                }, 0),
+              )} / {formatMoney(Number(amount || 0))}
+            </p>
+          ) : null}
 
           <Button disabled={loading} fullWidth onClick={handleSave}>
             Сохранить

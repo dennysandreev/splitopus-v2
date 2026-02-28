@@ -9,9 +9,10 @@ import { getMemberName } from "../utils/members";
 interface DebtsScreenProps {
   tripId: string;
   onBack: () => void;
+  onOpenSettings: () => void;
 }
 
-function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
+function DebtsScreen({ tripId, onBack, onOpenSettings }: DebtsScreenProps) {
   const debts = useStore((state) => state.debts);
   const balances = useStore((state) => state.balances);
   const groups = useStore((state) => state.groups);
@@ -28,84 +29,74 @@ function DebtsScreen({ tripId, onBack }: DebtsScreenProps) {
   }, [tripId, fetchDebts, fetchTripMembers]);
 
   const trip = groups.find((group) => group.id === tripId);
-  const currency = trip?.currency ?? "₽";
-
-  const handleNotify = async () => {
-    await notifyDebts(tripId);
-  };
+  const currency = trip?.currency ?? "THB";
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <header className="flex-none z-10 bg-slate-50">
-        <Navbar onBack={onBack} title="Баланс поездки" />
+    <div className="app-shell">
+      <header className="app-header">
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Balance" />
       </header>
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3">
-        {loading ? <p className="text-sm text-slate-500">Загрузка расчетов...</p> : null}
-        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
-              Баланс участников
-            </h2>
-            <Button onClick={handleNotify} variant="secondary">
-              🔔 Отправить расчет всем
-            </Button>
-          </div>
+      <main className="app-main">
+        <div className="space-y-4">
+          <Card className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-textMuted">Баланс участников</h2>
+              <Button
+                className="px-3 py-2 text-xs"
+                onClick={() => void notifyDebts(tripId)}
+                variant="secondary"
+              >
+                🔔 Уведомить
+              </Button>
+            </div>
 
-          {Object.keys(balances).length > 0 ? (
-            <div className="space-y-2">
-              {Object.entries(balances).map(([idOrName, amount], index) => (
-                <div
-                  className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2"
-                  key={`${idOrName}-${index}`}
-                >
-                  <p className="text-sm font-medium text-slate-900">
-                    {getMemberName(currentTripMembers, idOrName)}
-                  </p>
-                  <p
-                    className={`text-sm font-semibold ${
-                      amount >= 0 ? "text-emerald-600" : "text-rose-600"
-                    }`}
+            {Object.keys(balances).length > 0 ? (
+              <div className="space-y-2">
+                {Object.entries(balances).map(([idOrName, amount], index) => (
+                  <div
+                    className="flex items-center justify-between rounded-input border border-borderSoft bg-white px-3 py-2"
+                    key={`${idOrName}-${index}`}
                   >
-                    {amount > 0 ? "+" : ""}
-                    {formatMoney(amount)} {currency}
+                    <p className="text-sm font-medium text-textMain">
+                      {getMemberName(currentTripMembers, idOrName)}
+                    </p>
+                    <p className={`text-sm font-semibold ${amount >= 0 ? "text-success" : "text-danger"}`}>
+                      {amount > 0 ? "+" : ""}
+                      {formatMoney(amount)} {currency}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : !loading ? (
+              <p className="text-sm text-textMuted">Баланс пока недоступен</p>
+            ) : null}
+          </Card>
+
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-textMuted">Расчеты</h2>
+            {!loading && debts.length === 0 ? (
+              <Card>
+                <p className="text-center text-base font-medium text-success">Все в расчете! 🎉</p>
+              </Card>
+            ) : null}
+
+            {debts.map((debt, index) => (
+              <Card key={`${debt.from}-${debt.to}-${index}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm font-medium text-textMain">
+                    {getMemberName(currentTripMembers, debt.from)} → {getMemberName(currentTripMembers, debt.to)}
+                  </p>
+                  <p className="text-base font-semibold text-textMain">
+                    {formatMoney(debt.amount)} {currency}
                   </p>
                 </div>
-              ))}
-            </div>
-          ) : !loading ? (
-            <p className="text-sm text-slate-500">Баланс пока недоступен</p>
-          ) : null}
-        </Card>
+              </Card>
+            ))}
+          </section>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
-            Расчеты
-          </h2>
-          {!loading && debts.length === 0 ? (
-            <Card>
-              <p className="text-center text-base font-medium text-emerald-600">
-                Все в расчете! 🎉
-              </p>
-            </Card>
-          ) : null}
-
-          {debts.map((debt, index) => (
-            <Card key={`${debt.from}-${debt.to}-${index}`}>
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-medium text-slate-900">
-                  {getMemberName(currentTripMembers, debt.from)} {"\u2192"}{" "}
-                  {getMemberName(currentTripMembers, debt.to)}
-                </p>
-                <p className="text-lg font-semibold text-slate-900">
-                  {formatMoney(debt.amount)} {currency}
-                </p>
-              </div>
-            </Card>
-          ))}
-        </section>
+          {loading ? <p className="text-sm text-textMuted">Загрузка...</p> : null}
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
         </div>
       </main>
     </div>

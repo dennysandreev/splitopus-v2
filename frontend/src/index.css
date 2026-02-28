@@ -12,4 +12,36 @@ body,
 body {
   overscroll-behavior: none;
   position: fixed;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-family: "SF Pro Display", Inter, system-ui, sans-serif;
+  color: #1c2233;
+  background: linear-gradient(160deg, #fbfaff 0%, #f2f8ff 100%);
+}
+
+@layer components {
+  .app-shell {
+    @apply h-screen w-full flex flex-col overflow-hidden bg-app-gradient;
+  }
+
+  .app-header {
+    @apply flex-none bg-white/95 border-b border-borderSoft backdrop-blur-sm;
+  }
+
+  .app-main {
+    @apply flex-1 overflow-y-auto bg-slate-50/80 p-4;
+  }
+
+  .premium-card {
+    @apply rounded-card border border-borderSoft bg-white shadow-card;
+  }
+
+  .input-premium {
+    @apply w-full rounded-input border border-borderSoft bg-white px-3 py-2.5 text-base text-textMain outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/20;
+  }
+
+  .chip-pill {
+    @apply rounded-full px-3 py-1.5 text-xs font-medium;
+  }
 }

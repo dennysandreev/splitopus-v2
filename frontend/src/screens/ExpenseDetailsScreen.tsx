@@ -7,27 +7,26 @@ import { getMemberName } from "../utils/members";
 interface ExpenseDetailsScreenProps {
   expenseId: string;
   onBack: () => void;
+  onOpenSettings: () => void;
 }
 
-function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) {
+function ExpenseDetailsScreen({ expenseId, onBack, onOpenSettings }: ExpenseDetailsScreenProps) {
   const currentTripMembers = useStore((state) => state.currentTripMembers);
   const currentTripId = useStore((state) => state.currentTripId);
   const trip = useStore((state) => state.groups.find((g) => g.id === currentTripId));
-  const currency = trip?.currency ?? "";
+  const currency = trip?.currency ?? "THB";
 
-  const expense = useStore((state) =>
-    state.expenses.find((item) => item.id === expenseId),
-  );
+  const expense = useStore((state) => state.expenses.find((item) => item.id === expenseId));
 
   if (!expense) {
     return (
-      <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-        <header className="flex-none z-10 bg-slate-50">
-          <Navbar onBack={onBack} title="Детали расхода" />
+      <div className="app-shell">
+        <header className="app-header">
+          <Navbar onBack={onBack} onSettings={onOpenSettings} title="Expense Details" />
         </header>
-        <main className="flex-1 overflow-y-auto p-4">
+        <main className="app-main">
           <Card>
-            <p className="text-sm text-slate-500">Расход не найден</p>
+            <p className="text-sm text-textMuted">Расход не найден</p>
           </Card>
         </main>
       </div>
@@ -35,71 +34,73 @@ function ExpenseDetailsScreen({ expenseId, onBack }: ExpenseDetailsScreenProps) 
   }
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <header className="flex-none z-10 bg-slate-50">
-        <Navbar onBack={onBack} title="Детали расхода" />
+    <div className="app-shell">
+      <header className="app-header">
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Expense Details" />
       </header>
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="app-main">
         <div className="space-y-4">
-        <Card className="space-y-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Сумма</p>
-            <p className="text-2xl font-semibold text-slate-900">
-              {formatMoney(expense.amount)} {currency}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          <Card className="space-y-4 p-5">
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Категория</p>
-              <p className="text-sm font-medium text-slate-900">
-                {CATEGORY_LABELS[expense.category] ?? expense.category}
+              <p className="text-xs uppercase tracking-wide text-textMuted">Сумма</p>
+              <p className="mt-1 text-3xl font-semibold text-textMain">
+                {formatMoney(expense.amount)} {currency}
               </p>
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Кто платил</p>
-              <p className="text-sm font-medium text-slate-900">
-                {expense.payerName ?? getMemberName(currentTripMembers, expense.payerId)}
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-textMuted">Категория</p>
+                <p className="text-sm font-medium text-textMain">
+                  {CATEGORY_LABELS[expense.category] ?? expense.category}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-textMuted">Кто платил</p>
+                <p className="text-sm font-medium text-textMain">
+                  {expense.payerName ?? getMemberName(currentTripMembers, expense.payerId)}
+                </p>
+              </div>
             </div>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Описание</p>
-            <p className="text-sm text-slate-900">{expense.description}</p>
-          </div>
-        </Card>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-textMuted">Описание</p>
+              <p className="text-sm text-textMain">{expense.description}</p>
+            </div>
+          </Card>
 
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
-            На кого поделено
-          </h2>
-          {expense.splitDetails && expense.splitDetails.length > 0 ? (
-            expense.splitDetails.map((item, index) => (
-              <Card key={`${item.userId ?? item.name}-${index}`}>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-medium text-slate-900">
-                    {getMemberName(currentTripMembers, item.userId ?? item.name)}
-                  </p>
-                  <p className="text-sm text-slate-700">{formatMoney(item.amount)} {currency}</p>
-                </div>
-              </Card>
-            ))
-          ) : expense.split && Object.keys(expense.split).length > 0 ? (
-            Object.entries(expense.split).map(([userId, amount]) => (
-              <Card key={userId}>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-medium text-slate-900">
-                    {getMemberName(currentTripMembers, userId)}
-                  </p>
-                  <p className="text-sm text-slate-700">{formatMoney(amount)} {currency}</p>
-                </div>
-              </Card>
-            ))
-          ) : (
-            <Card>
-              <p className="text-sm text-slate-500">Данные сплита недоступны</p>
-            </Card>
-          )}
-        </section>
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-textMuted">На кого поделено</h2>
+            {expense.splitDetails && expense.splitDetails.length > 0
+              ? expense.splitDetails.map((item, index) => (
+                  <Card key={`${item.userId ?? item.name}-${index}`}>
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm font-medium text-textMain">
+                        {getMemberName(currentTripMembers, item.userId ?? item.name)}
+                      </p>
+                      <p className="text-sm font-semibold text-textMain">
+                        {formatMoney(item.amount)} {currency}
+                      </p>
+                    </div>
+                  </Card>
+                ))
+              : expense.split && Object.keys(expense.split).length > 0
+                ? Object.entries(expense.split).map(([userId, amount]) => (
+                    <Card key={userId}>
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-sm font-medium text-textMain">
+                          {getMemberName(currentTripMembers, userId)}
+                        </p>
+                        <p className="text-sm font-semibold text-textMain">
+                          {formatMoney(amount)} {currency}
+                        </p>
+                      </div>
+                    </Card>
+                  ))
+                : (
+                  <Card>
+                    <p className="text-sm text-textMuted">Данные сплита недоступны</p>
+                  </Card>
+                )}
+          </section>
         </div>
       </main>
     </div>
