@@ -34,7 +34,6 @@ function GroupDetailsScreen({
   const groups = useStore((state) => state.groups);
   const user = useStore((state) => state.user);
   const loading = useStore((state) => state.loading);
-  const error = useStore((state) => state.error);
   const fetchExpenses = useStore((state) => state.fetchExpenses);
   const fetchDebts = useStore((state) => state.fetchDebts);
   const fetchTripMembers = useStore((state) => state.fetchTripMembers);
@@ -57,15 +56,10 @@ function GroupDetailsScreen({
     return expenses.filter((expense) => String(expense.payerId) === String(filterUser));
   }, [expenses, filterUser]);
 
-  useEffect(() => {
-    console.log("Balances:", balances, "My ID:", user?.id);
-  }, [balances, user]);
-
   const handleShare = () => {
     if (!trip?.code || !trip?.name) {
       return;
     }
-
     const botStartLink = `https://t.me/SplitopusBot?start=${trip.code}`;
     const shareText = encodeURIComponent(
       `Присоединяйся к поездке "${trip.name}" в Splitopus! 🌴\nКод: ${trip.code}\n👉 ${botStartLink}`,
@@ -76,75 +70,77 @@ function GroupDetailsScreen({
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      <header className="flex-none z-10 bg-white shadow-md">
+      <div className="flex-none z-10 bg-white">
         <Navbar onBack={onBack} title="Детали поездки" />
         <div className="px-4 pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-lg font-semibold text-slate-900">
-                {trip?.name ?? "Поездка"}
-              </p>
-              <button
-                className="mt-1 flex items-center text-xs text-slate-500 hover:text-slate-700"
-                onClick={handleShare}
-                type="button"
-              >
-                🔗 Поделиться поездкой
-              </button>
+          <div className="bg-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-lg font-semibold text-slate-900">
+                  {trip?.name ?? "Поездка"}
+                </p>
+                <button
+                  className="mt-1 flex items-center text-xs text-slate-500 hover:text-slate-700"
+                  onClick={handleShare}
+                  type="button"
+                >
+                  🔗 Поделиться
+                </button>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-slate-500">Мой баланс</p>
+                <p
+                  className={`text-2xl font-semibold leading-tight ${
+                    myBalance >= 0 ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {myBalance > 0 ? "+" : ""}
+                  {formatMoney(myBalance)} {currency}
+                </p>
+              </div>
             </div>
 
-            <div className="mt-4 text-center">
-              <p className="text-sm text-slate-500">Мой баланс</p>
-              <p
-                className={`mt-1 text-4xl font-semibold ${
-                  myBalance >= 0 ? "text-emerald-600" : "text-rose-600"
-                }`}
-              >
-                {myBalance > 0 ? "+" : ""}
-                {formatMoney(myBalance)} {currency}
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                Всего в поездке: {formatMoney(totalSpent)} {currency}
-              </p>
-            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Всего в поездке: {formatMoney(totalSpent)} {currency}
+            </p>
 
-            <div className="mt-5 grid grid-cols-4 gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <button
-                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
                 onClick={onOpenStats}
                 type="button"
               >
-                <div className="text-lg">📊</div>
-                <div className="mt-1 text-xs text-slate-600">Статистика</div>
+                <span className="block text-base">📊</span>
+                <span className="mt-1 block text-[11px] text-slate-700">Статистика</span>
               </button>
               <button
-                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
                 onClick={onOpenDebts}
                 type="button"
               >
-                <div className="text-lg">⚖️</div>
-                <div className="mt-1 text-xs text-slate-600">Баланс</div>
+                <span className="block text-base">⚖️</span>
+                <span className="mt-1 block text-[11px] text-slate-700">Баланс</span>
               </button>
               <button
-                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
                 onClick={onOpenNotes}
                 type="button"
               >
-                <div className="text-lg">📝</div>
-                <div className="mt-1 text-xs text-slate-600">Заметки</div>
+                <span className="block text-base">📝</span>
+                <span className="mt-1 block text-[11px] text-slate-700">Заметки</span>
               </button>
               <button
-                className="rounded-xl bg-white px-2 py-3 text-center shadow-sm ring-1 ring-slate-100"
+                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
                 onClick={onOpenRoulette}
                 type="button"
               >
-                <div className="text-lg">🎲</div>
-                <div className="mt-1 text-xs text-slate-600">Рулетка</div>
+                <span className="block text-base">🎲</span>
+                <span className="mt-1 block text-[11px] text-slate-700">Рулетка</span>
               </button>
             </div>
 
             <button
-              className="mt-4 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white"
+              className="mt-4 w-full rounded-xl bg-slate-900 py-3 text-sm font-medium text-white shadow-sm transition-transform active:scale-[0.98]"
               onClick={onOpenAddExpense}
               type="button"
             >
@@ -152,16 +148,16 @@ function GroupDetailsScreen({
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="flex-1 overflow-y-auto px-4 pb-4">
-        <section className="space-y-3">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+      <main className="flex-1 overflow-y-auto bg-slate-50 px-4 pb-4">
+        <section className="space-y-3 pt-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
-              className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition ${
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 filterUser === null
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-200 text-slate-700"
+                  ? "bg-slate-800 text-white"
+                  : "bg-slate-200 text-slate-600"
               }`}
               onClick={() => setFilterUser(null)}
               type="button"
@@ -170,10 +166,10 @@ function GroupDetailsScreen({
             </button>
             {currentTripMembers.map((member) => (
               <button
-                className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition ${
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
                   filterUser === String(member.id)
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-200 text-slate-700"
+                    ? "bg-slate-800 text-white"
+                    : "bg-slate-200 text-slate-600"
                 }`}
                 key={member.id}
                 onClick={() => setFilterUser(String(member.id))}
@@ -184,40 +180,49 @@ function GroupDetailsScreen({
             ))}
           </div>
 
-          <h2 className="text-sm font-medium uppercase tracking-wide text-slate-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-1">
             Последние оплаты
           </h2>
-          {loading ? <p className="text-sm text-slate-500">Загрузка...</p> : null}
-          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-          {filteredExpenses.map((expense) => (
-            <button
-              className="w-full text-left"
-              key={expense.id}
-              onClick={() => onOpenExpense(expense.id)}
-              type="button"
-            >
-              <Card className="rounded-2xl transition-colors hover:bg-slate-50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">
-                      {expense.description}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {CATEGORY_LABELS[expense.category] ?? expense.category} ·{" "}
-                      {getMemberName(currentTripMembers, expense.payerId)}
+          
+          {loading ? <p className="text-sm text-slate-500 pl-1">Загрузка...</p> : null}
+          
+          <div className="space-y-2">
+            {filteredExpenses.map((expense) => (
+              <button
+                className="w-full text-left"
+                key={expense.id}
+                onClick={() => onOpenExpense(expense.id)}
+                type="button"
+              >
+                <Card className="rounded-xl p-3 transition-colors hover:bg-slate-50 border border-slate-100 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 line-clamp-1">
+                        {expense.description}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                         <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+                           {CATEGORY_LABELS[expense.category] ?? expense.category}
+                         </span>
+                         <span className="text-xs text-slate-400">•</span>
+                         <span className="text-xs text-slate-500">
+                           {getMemberName(currentTripMembers, expense.payerId)}
+                         </span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                      {formatMoney(expense.amount)} {currency}
                     </p>
                   </div>
-                  <p className="text-sm text-slate-700">
-                    {formatMoney(expense.amount)} {currency}
-                  </p>
-                </div>
-              </Card>
-            </button>
-          ))}
+                </Card>
+              </button>
+            ))}
+          </div>
+          
           {!loading && filteredExpenses.length === 0 ? (
-            <Card className="rounded-2xl">
-              <p className="text-sm text-slate-500">Расходов пока нет</p>
-            </Card>
+            <div className="py-8 text-center">
+              <p className="text-sm text-slate-400">Здесь пока пусто</p>
+            </div>
           ) : null}
         </section>
       </main>
