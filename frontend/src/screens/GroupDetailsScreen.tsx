@@ -79,15 +79,15 @@ function GroupDetailsScreen({
                 <p className="truncate text-lg font-semibold text-slate-900">
                   {trip?.name ?? "Поездка"}
                 </p>
+              </div>
+              <div className="text-right">
                 <button
-                  className="mt-1 flex items-center text-xs text-slate-500 hover:text-slate-700"
+                  className="mb-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm text-slate-600 hover:bg-slate-200"
                   onClick={handleShare}
                   type="button"
                 >
-                  🔗 Поделиться
+                  🔗
                 </button>
-              </div>
-              <div className="text-right">
                 <p className="text-xs text-slate-500">Мой баланс</p>
                 <p
                   className={`text-2xl font-semibold leading-tight ${
@@ -104,38 +104,34 @@ function GroupDetailsScreen({
               Всего в поездке: {formatMoney(totalSpent)} {currency}
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2">
               <button
-                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
                 onClick={onOpenStats}
                 type="button"
               >
-                <span className="block text-base">📊</span>
-                <span className="mt-1 block text-[11px] text-slate-700">Статистика</span>
+                📊 Статистика
               </button>
               <button
-                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
                 onClick={onOpenDebts}
                 type="button"
               >
-                <span className="block text-base">⚖️</span>
-                <span className="mt-1 block text-[11px] text-slate-700">Баланс</span>
+                ⚖️ Баланс
               </button>
               <button
-                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
                 onClick={onOpenNotes}
                 type="button"
               >
-                <span className="block text-base">📝</span>
-                <span className="mt-1 block text-[11px] text-slate-700">Заметки</span>
+                📝 Заметки
               </button>
               <button
-                className="min-w-[78px] flex-1 rounded-xl bg-slate-100 px-3 py-2 text-center active:bg-slate-200"
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-lg font-medium text-slate-700 active:bg-slate-100"
                 onClick={onOpenRoulette}
                 type="button"
               >
-                <span className="block text-base">🎲</span>
-                <span className="mt-1 block text-[11px] text-slate-700">Рулетка</span>
+                🎲 Рулетка
               </button>
             </div>
 
