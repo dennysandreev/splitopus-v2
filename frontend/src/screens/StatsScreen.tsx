@@ -40,7 +40,7 @@ function StatsScreen({ tripId, onBack, onOpenSettings }: StatsScreenProps) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Statistics" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Статистика" />
       </header>
       <main className="app-main">
         <div className="space-y-4">

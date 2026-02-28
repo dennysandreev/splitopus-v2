@@ -81,7 +81,7 @@ function RouletteScreen({ tripId, onBack, onOpenSettings }: RouletteScreenProps)
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Roulette" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Рулетка" />
       </header>
 
       <main className="app-main">

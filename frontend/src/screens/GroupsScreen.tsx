@@ -57,7 +57,7 @@ function GroupsScreen({ onSelectGroup, onOpenSettings, onOpenJoinTrip }: GroupsS
               Создать поездку
             </Button>
             <Button className="flex-1" onClick={onOpenJoinTrip} variant="secondary">
-              Присоединиться
+              Вступить
             </Button>
           </div>
         </div>
@@ -100,6 +100,23 @@ function GroupsScreen({ onSelectGroup, onOpenSettings, onOpenJoinTrip }: GroupsS
                     ? `Участников: ${group.participantsCount}`
                     : "Участники: обновляются после синхронизации"}
                 </p>
+                {group.members.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {group.members.slice(0, 5).map((member) => (
+                      <span
+                        className="rounded-full border border-borderSoft bg-slate-50 px-2 py-0.5 text-[11px] text-textMuted"
+                        key={member}
+                      >
+                        {member}
+                      </span>
+                    ))}
+                    {group.members.length > 5 ? (
+                      <span className="rounded-full border border-borderSoft bg-slate-50 px-2 py-0.5 text-[11px] text-textMuted">
+                        +{group.members.length - 5}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </Card>
             </button>
           ))}

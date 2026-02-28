@@ -14,7 +14,7 @@ function SettingsScreen({ onBack }: SettingsScreenProps) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} title="Settings" />
+        <Navbar onBack={onBack} title="Настройки" />
       </header>
       <main className="app-main">
         <div className="space-y-3">

@@ -160,7 +160,14 @@ function App() {
       ) : null}
 
       {screen === "joinTrip" ? (
-        <JoinTripScreen onBack={() => navigate("groups")} onOpenSettings={openSettings} />
+        <JoinTripScreen
+          onBack={() => navigate("groups")}
+          onJoined={(tripId) => {
+            setSelectedGroupId(tripId);
+            navigate("groupDetails");
+          }}
+          onOpenSettings={openSettings}
+        />
       ) : null}
 
       {screen === "settings" ? (

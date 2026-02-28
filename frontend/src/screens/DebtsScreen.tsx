@@ -34,7 +34,7 @@ function DebtsScreen({ tripId, onBack, onOpenSettings }: DebtsScreenProps) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Balance" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Баланс поездки" />
       </header>
 
       <main className="app-main">

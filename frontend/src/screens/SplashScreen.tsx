@@ -17,7 +17,7 @@ function SplashScreen({ onOpenSettings }: SplashScreenProps) {
       <div className="premium-card w-full max-w-sm p-8 text-center">
         <div className="mx-auto h-14 w-14 rounded-2xl bg-hero-tint" />
         <h1 className="mt-4 text-2xl font-semibold text-textMain">Splitopus</h1>
-        <p className="mt-2 text-sm text-textMuted">Smart travel expenses in Telegram</p>
+        <p className="mt-2 text-sm text-textMuted">Умный учет расходов в Telegram</p>
       </div>
     </div>
   );

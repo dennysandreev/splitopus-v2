@@ -138,7 +138,7 @@ function AddExpenseScreen({ tripId, onBack, onOpenSettings }: AddExpenseScreenPr
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Add Expense" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Добавить транзакцию" />
       </header>
 
       <main className="app-main pb-[calc(1rem+env(safe-area-inset-bottom))]">

@@ -22,7 +22,7 @@ function ExpenseDetailsScreen({ expenseId, onBack, onOpenSettings }: ExpenseDeta
     return (
       <div className="app-shell">
         <header className="app-header">
-          <Navbar onBack={onBack} onSettings={onOpenSettings} title="Expense Details" />
+          <Navbar onBack={onBack} onSettings={onOpenSettings} title="Детали оплаты" />
         </header>
         <main className="app-main">
           <Card>
@@ -36,7 +36,7 @@ function ExpenseDetailsScreen({ expenseId, onBack, onOpenSettings }: ExpenseDeta
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Expense Details" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Детали оплаты" />
       </header>
       <main className="app-main">
         <div className="space-y-4">

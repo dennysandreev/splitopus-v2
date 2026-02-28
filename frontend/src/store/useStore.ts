@@ -116,6 +116,7 @@ export interface Trip {
   code: string;
   currency: string;
   rate: number;
+  members: string[];
   createdAt?: string;
   participantsCount?: number;
 }
@@ -135,6 +136,7 @@ interface TripDto {
   creator_id: string;
   created_at: string;
   participants_count?: number;
+  members?: string[];
 }
 
 interface GetTripsResponse {
@@ -174,6 +176,7 @@ interface StoreState {
   fetchStats: (tripId: string) => Promise<void>;
   fetchTrips: () => Promise<void>;
   createTrip: (name: string, currency: string) => Promise<boolean>;
+  joinTrip: (code: string) => Promise<string | null>;
   fetchTripMembers: (tripId: string) => Promise<void>;
 }
 
@@ -184,6 +187,7 @@ function mapTrip(dto: TripDto): Trip {
     code: dto.code,
     currency: dto.currency,
     rate: dto.rate ?? 0,
+    members: dto.members ?? [],
     createdAt: dto.created_at,
     participantsCount: dto.participants_count,
   };
@@ -364,6 +368,66 @@ export const useStore = create<StoreState>((set, get) => ({
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return false;
+    }
+  },
+
+  joinTrip: async (code) => {
+    const { user } = get();
+    if (!user?.id) {
+      set({ error: "User is not authorized" });
+      return null;
+    }
+
+    const normalizedCode = code.trim();
+    if (!normalizedCode) {
+      set({ error: "Код поездки пустой" });
+      return null;
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/trips/join`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: normalizedCode,
+          user_id: String(user.id),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to join trip: ${response.status}`);
+      }
+
+      const rawData = (await response.json()) as
+        | { trip_id?: string; tripId?: string; id?: string; trip?: TripDto }
+        | undefined;
+
+      await get().fetchTrips();
+
+      const joinedTripId =
+        rawData?.trip_id ??
+        rawData?.tripId ??
+        rawData?.id ??
+        (rawData?.trip ? mapTrip(rawData.trip).id : undefined) ??
+        get().groups.find((trip) => trip.code.toUpperCase() === normalizedCode.toUpperCase())?.id;
+
+      set({
+        loading: false,
+        error: null,
+        currentTripId: joinedTripId ?? get().currentTripId,
+      });
+
+      return joinedTripId ?? null;
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      return null;
     }
   },
 

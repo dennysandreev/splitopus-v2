@@ -67,7 +67,7 @@ function GroupDetailsScreen({
     }
 
     hapticLight();
-    const botStartLink = `https://t.me/SplitopusBot?start=${trip.code}`;
+    const botStartLink = `https://t.me/splitopus_bot?start=${trip.code}`;
     const shareText = encodeURIComponent(
       `Присоединяйся к поездке "${trip.name}" в Splitopus! 🌴\nКод: ${trip.code}\n👉 ${botStartLink}`,
     );
@@ -78,14 +78,14 @@ function GroupDetailsScreen({
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Trip Dashboard" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Детали поездки" />
       </header>
 
       <main className="app-main pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
         <Card className="relative overflow-hidden p-5">
           <div className="pointer-events-none absolute inset-0 bg-hero-tint" />
           <div className="relative">
-            <p className="text-sm font-medium text-textMuted">My Balance</p>
+            <p className="text-sm font-medium text-textMuted">Мой баланс</p>
             <p
               className={`mt-1 text-4xl font-bold tracking-tight ${
                 myBalance >= 0 ? "text-success" : "text-danger"
@@ -94,29 +94,31 @@ function GroupDetailsScreen({
               {myBalance > 0 ? "+" : ""}
               {formatMoney(myBalance)} {currency}
             </p>
-            <p className="mt-2 text-sm text-textMuted">
-              Total spent: {formatMoney(totalSpent)} {currency}
-            </p>
+            <p className="mt-2 text-sm text-textMuted">Всего в поездке: {formatMoney(totalSpent)} {currency}</p>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <Button className="h-14 text-base" onClick={onOpenStats} variant="secondary">
-                📊 Stats
+                📊 Статистика
               </Button>
               <Button className="h-14 text-base" onClick={onOpenDebts} variant="secondary">
-                ⚖️ Debts
+                ⚖️ Баланс
               </Button>
               <Button className="h-14 text-base" onClick={onOpenNotes} variant="secondary">
-                📝 Notes
+                📝 Заметки
               </Button>
               <Button className="h-14 text-base" onClick={onOpenRoulette} variant="secondary">
-                🎲 Roulette
+                🎲 Рулетка
               </Button>
             </div>
 
             <div className="mt-4 flex justify-center">
-              <Button className="h-9 px-4 text-xs" onClick={handleShare} variant="ghost">
-                Share Trip
-              </Button>
+              <button
+                className="rounded-full border border-borderSoft bg-slate-50 px-4 py-2 text-xs font-medium text-textMuted transition hover:bg-slate-100"
+                onClick={handleShare}
+                type="button"
+              >
+                🔗 Поделиться
+              </button>
             </div>
           </div>
         </Card>
@@ -134,7 +136,7 @@ function GroupDetailsScreen({
             }}
             type="button"
           >
-            All
+            Все
           </button>
           {currentTripMembers.map((member) => (
             <button
@@ -157,10 +159,10 @@ function GroupDetailsScreen({
 
         <div className="mt-4 space-y-3">
           <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-textMuted">
-            Latest Transactions
+            Последние оплаты
           </h2>
 
-          {loading ? <p className="px-1 text-sm text-textMuted">Loading...</p> : null}
+          {loading ? <p className="px-1 text-sm text-textMuted">Загрузка...</p> : null}
 
           {filteredExpenses.map((expense) => (
             <button
@@ -193,7 +195,7 @@ function GroupDetailsScreen({
 
           {!loading && filteredExpenses.length === 0 ? (
             <Card>
-              <p className="text-center text-sm text-textMuted">No transactions yet</p>
+              <p className="text-center text-sm text-textMuted">Пока нет оплат</p>
             </Card>
           ) : null}
         </div>
@@ -202,7 +204,7 @@ function GroupDetailsScreen({
       <div className="pointer-events-none fixed inset-x-0 bottom-0 mx-auto w-full max-w-xl px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="pointer-events-auto">
           <Button className="w-full" onClick={onOpenAddExpense}>
-            Add Expense
+            Добавить транзакцию
           </Button>
         </div>
       </div>

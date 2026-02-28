@@ -34,7 +34,7 @@ function NotesScreen({ tripId, onBack, onOpenSettings }: NotesScreenProps) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Notes" />
+        <Navbar onBack={onBack} onSettings={onOpenSettings} title="Заметки" />
       </header>
 
       <main className="app-main pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
@@ -68,7 +68,7 @@ function NotesScreen({ tripId, onBack, onOpenSettings }: NotesScreenProps) {
             value={text}
           />
           <Button disabled={loading} type="submit">
-            Add
+            Добавить
           </Button>
         </div>
       </form>
