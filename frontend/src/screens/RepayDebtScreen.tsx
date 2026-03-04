@@ -35,15 +35,20 @@ function RepayDebtScreen({ tripId, onBack, onOpenSettings }: RepayDebtScreenProp
     void fetchTripMembers(tripId);
   }, [tripId, fetchDebts, fetchTripMembers]);
 
+  const masterMembers = useMemo(
+    () => currentTripMembers.filter((member) => !member.linkedTo),
+    [currentTripMembers],
+  );
+
   const resolveMemberId = (raw: string): string | null => {
     const byId = currentTripMembers.find((member) => String(member.id) === String(raw));
     if (byId) {
-      return String(byId.id);
+      return byId.linkedTo ? String(byId.linkedTo) : String(byId.id);
     }
 
     const byName = currentTripMembers.find((member) => member.name === raw);
     if (byName) {
-      return String(byName.id);
+      return byName.linkedTo ? String(byName.linkedTo) : String(byName.id);
     }
 
     return null;
@@ -53,6 +58,7 @@ function RepayDebtScreen({ tripId, onBack, onOpenSettings }: RepayDebtScreenProp
     const options: RecipientOption[] = [];
     const seen = new Set<string>();
     const userIds = new Set<string>();
+    const masterIds = new Set(masterMembers.map((member) => String(member.id)));
 
     if (user?.id) {
       userIds.add(String(user.id));
@@ -70,7 +76,7 @@ function RepayDebtScreen({ tripId, onBack, onOpenSettings }: RepayDebtScreenProp
       }
 
       const resolvedId = resolveMemberId(String(debt.to));
-      if (!resolvedId || seen.has(resolvedId)) {
+      if (!resolvedId || seen.has(resolvedId) || !masterIds.has(String(resolvedId))) {
         return;
       }
 
@@ -86,13 +92,13 @@ function RepayDebtScreen({ tripId, onBack, onOpenSettings }: RepayDebtScreenProp
       return options;
     }
 
-    return currentTripMembers
+    return masterMembers
       .filter((member) => String(member.id) !== String(user?.id))
       .map((member) => ({
         id: String(member.id),
         name: member.name,
       }));
-  }, [currentTripMembers, debts, user?.id]);
+  }, [currentTripMembers, debts, masterMembers, user?.id]);
 
   useEffect(() => {
     if (recipientOptions.length === 0) {

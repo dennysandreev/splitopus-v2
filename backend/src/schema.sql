@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT,                    -- Имя (например, "Денис")
     active_trip_id TEXT,          -- ID текущей активной поездки
     state TEXT DEFAULT 'IDLE',    -- Текущее состояние (что делает бот: ждет ввода суммы, названия и т.д.)
-    linked_to TEXT,               -- ID "родителя", если это семейный аккаунт
+
     menu_msg_id INTEGER,          -- ID сообщения с меню (чтобы обновлять его, а не слать новое)
     temp_data_json TEXT,          -- Временные данные (draft_id, temp_trip_id и т.д.)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

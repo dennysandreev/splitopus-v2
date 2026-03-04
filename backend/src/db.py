@@ -57,11 +57,22 @@ def set_user_active_trip(user_id, trip_id):
     conn.commit()
     conn.close()
     
-def link_users(child_id, parent_id):
+def link_users(trip_id, child_id, parent_id):
+    """Привязывает пользователя к 'родителю' в рамках конкретной поездки"""
     conn = get_connection()
-    conn.execute("UPDATE users SET linked_to = ? WHERE id = ?", (str(parent_id), str(child_id)))
-    conn.commit()
-    conn.close()
+    # Сначала убедимся, что пользователь есть в поездке
+    try:
+        conn.execute("INSERT OR IGNORE INTO trip_members (trip_id, user_id) VALUES (?, ?)", (trip_id, str(child_id)))
+        # Теперь обновляем привязку
+        conn.execute(
+            "UPDATE trip_members SET linked_to = ? WHERE trip_id = ? AND user_id = ?", 
+            (str(parent_id), trip_id, str(child_id))
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Error linking users: {e}")
+    finally:
+        conn.close()
 
 def update_user_temp_data(user_id, temp_data):
     conn = get_connection()
@@ -90,12 +101,17 @@ def get_all_users_as_dict():
         users[d['id']] = d
     return users
 
-def get_linked_names(master_id, filter_ids=None):
+def get_linked_names(trip_id, master_id, filter_ids=None):
     conn = get_connection()
     mid = str(master_id)
     master = conn.execute("SELECT name FROM users WHERE id = ?", (mid,)).fetchone()
     master_name = master['name'] if master else 'Unknown'
-    children = conn.execute("SELECT id, name FROM users WHERE linked_to = ?", (mid,)).fetchall()
+    
+    # Ищем детей в конкретной поездке
+    children = conn.execute(
+        "SELECT u.id, u.name FROM users u JOIN trip_members tm ON u.id = tm.user_id WHERE tm.trip_id = ? AND tm.linked_to = ?", 
+        (trip_id, mid)
+    ).fetchall()
     
     child_names = []
     for c in children:
@@ -166,14 +182,25 @@ def get_trip_by_code(code):
     conn.close()
     return trip['id'] if trip else None
 
-def add_member_to_trip(trip_id, user_id):
+def add_member_to_trip(trip_id, user_id, linked_to=None):
     conn = get_connection()
     try:
-        conn.execute("INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)", (trip_id, str(user_id)))
+        conn.execute("INSERT OR IGNORE INTO trip_members (trip_id, user_id) VALUES (?, ?)", (trip_id, str(user_id)))
+        if linked_to:
+            conn.execute(
+                "UPDATE trip_members SET linked_to = ? WHERE trip_id = ? AND user_id = ?",
+                (str(linked_to), trip_id, str(user_id))
+            )
         conn.commit()
-    except sqlite3.IntegrityError:
-        pass # Уже участник
+    except Exception as e:
+        print(f"Error adding member: {e}")
     conn.close()
+
+def get_trip_members_links(trip_id):
+    conn = get_connection()
+    rows = conn.execute("SELECT user_id, linked_to FROM trip_members WHERE trip_id = ?", (trip_id,)).fetchall()
+    conn.close()
+    return {row['user_id']: row['linked_to'] for row in rows if row['linked_to']}
 
 def get_user_trips(user_id):
     conn = get_connection()

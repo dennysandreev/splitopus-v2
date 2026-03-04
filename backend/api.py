@@ -159,10 +159,10 @@ def notify_new_expense(trip_id, payer_id, amount, desc, category="OTHER", split=
         payer_row = cursor.fetchone()
         payer_name = payer_row['name'] if payer_row else 'User'
         
-        cursor.execute("SELECT u.id, u.linked_to FROM users u JOIN trip_members tm ON u.id = tm.user_id WHERE tm.trip_id = ?", (trip_id,))
+        cursor.execute("SELECT tm.user_id, tm.linked_to FROM trip_members tm WHERE tm.trip_id = ?", (trip_id,))
         members_rows = cursor.fetchall()
-        members = [r['id'] for r in members_rows]
-        link_map = {r['id']: r['linked_to'] for r in members_rows if r['linked_to']}
+        members = [r['user_id'] for r in members_rows]
+        link_map = {r['user_id']: r['linked_to'] for r in members_rows if r['linked_to']}
         
         masters = set(logic.get_master(m, link_map) for m in members)
         payer_master = logic.get_master(payer_id, link_map)
@@ -346,9 +346,9 @@ def leave_trip(trip_id: str, request: Dict[str, str] = Body(...)):
         # OR strictly 0. Let's try strictly 0 first.
         
         # We need member list and expenses to calc balance
-        cursor.execute("SELECT u.id, u.linked_to FROM users u JOIN trip_members tm ON u.id = tm.user_id WHERE tm.trip_id = ?", (trip_id,))
+        cursor.execute("SELECT tm.user_id, tm.linked_to FROM trip_members tm WHERE tm.trip_id = ?", (trip_id,))
         members_rows = cursor.fetchall()
-        link_map = {row['id']: row['linked_to'] for row in members_rows if row['linked_to']}
+        link_map = {row['user_id']: row['linked_to'] for row in members_rows if row['linked_to']}
         
         cursor.execute("SELECT payer_id, amount, category, split_json FROM expenses WHERE trip_id = ?", (trip_id,))
         expenses_rows = cursor.fetchall()
@@ -361,7 +361,7 @@ def leave_trip(trip_id: str, request: Dict[str, str] = Body(...)):
                 exp["split"] = {}
             expenses.append(exp)
             
-        trip_data = {'members': [m['id'] for m in members_rows], 'expenses': expenses}
+        trip_data = {'members': [m['user_id'] for m in members_rows], 'expenses': expenses}
         balances, _, _ = logic.calculate_balance(trip_data, link_map=link_map)
         
         user_balance = balances.get(user_id, 0)
@@ -432,14 +432,13 @@ def get_user_status(user_id: str):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT active_trip_id, linked_to FROM users WHERE id = ?", (user_id,))
+        cursor.execute("SELECT active_trip_id FROM users WHERE id = ?", (user_id,))
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
             
         return {
-            "active_trip_id": row['active_trip_id'], 
-            "linked_to": row['linked_to']
+            "active_trip_id": row['active_trip_id']
         }
     except HTTPException as he:
         raise he
@@ -523,7 +522,7 @@ def get_trip_members(trip_id: str):
     cursor = conn.cursor()
     try:
         query = """
-        SELECT u.id, u.name, u.linked_to
+        SELECT u.id, u.name, tm.linked_to
         FROM users u
         JOIN trip_members tm ON u.id = tm.user_id
         WHERE tm.trip_id = ?
@@ -543,7 +542,7 @@ def get_trip_debts(trip_id: str):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-        SELECT u.id, u.name, u.linked_to
+        SELECT u.id, u.name, tm.linked_to
         FROM users u 
         JOIN trip_members tm ON u.id = tm.user_id 
         WHERE tm.trip_id = ?

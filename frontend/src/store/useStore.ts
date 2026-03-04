@@ -140,6 +140,10 @@ export interface JoinTripPreview {
   participants: JoinTripParticipant[];
 }
 
+export interface UserStatus {
+  activeTripId: string | null;
+}
+
 interface TripDto {
   id: string;
   name: string;
@@ -170,6 +174,7 @@ interface StoreState {
   currentTripId: string | null;
   groups: Trip[];
   currentTripMembers: TripMember[];
+  activeTripLinkedMap: Record<string, string | null>;
   expenses: Expense[];
   debts: DebtTransaction[];
   balances: Record<string, number>;
@@ -191,7 +196,12 @@ interface StoreState {
   createTrip: (name: string, currency: string) => Promise<boolean>;
   joinTrip: (code: string) => Promise<string | null>;
   fetchJoinTripPreview: (code: string) => Promise<JoinTripPreview | null>;
-  requestPartnerLink: (code: string, partnerId: string) => Promise<boolean>;
+  requestPartnerLink: (
+    tripId: string,
+    code: string,
+    partnerId: string,
+  ) => Promise<boolean>;
+  fetchUserStatus: (userId: string) => Promise<UserStatus | null>;
   leaveTrip: (tripId: string) => Promise<void>;
   deleteTrip: (tripId: string) => Promise<void>;
   fetchTripMembers: (tripId: string) => Promise<void>;
@@ -284,6 +294,7 @@ export const useStore = create<StoreState>((set, get) => ({
   currentTripId: null,
   groups: [],
   currentTripMembers: [],
+  activeTripLinkedMap: {},
   expenses: [],
   debts: [],
   balances: {},
@@ -519,7 +530,7 @@ export const useStore = create<StoreState>((set, get) => ({
     }
   },
 
-  requestPartnerLink: async (code, partnerId) => {
+  requestPartnerLink: async (tripId, code, partnerId) => {
     const { user } = get();
     if (!user?.id) {
       set({ error: "Пользователь не авторизован" });
@@ -536,6 +547,7 @@ export const useStore = create<StoreState>((set, get) => ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          trip_id: String(tripId),
           code: code.trim().toUpperCase(),
           user_id: String(user.id),
           partner_id: String(partnerId),
@@ -554,6 +566,33 @@ export const useStore = create<StoreState>((set, get) => ({
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return false;
+    }
+  },
+
+  fetchUserStatus: async (userId) => {
+    const normalizedUserId = String(userId ?? "").trim();
+    if (!normalizedUserId) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/users/${encodeURIComponent(normalizedUserId)}/status`,
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = (await response.json()) as
+        | { active_trip_id?: string | null }
+        | undefined;
+
+      return {
+        activeTripId: data?.active_trip_id ? String(data.active_trip_id) : null,
+      };
+    } catch {
+      return null;
     }
   },
 
@@ -830,19 +869,27 @@ export const useStore = create<StoreState>((set, get) => ({
 
       const data = (await response.json()) as GetTripMembersResponse;
       const currentUser = get().user;
-      set({
-        currentTripMembers: data.members.map((member) => {
-          const mapped = mapTripMember(member);
-          if (
-            currentUser &&
-            String(mapped.id) === String(currentUser.id) &&
-            (mapped.name === "User" || mapped.name === "Unknown")
-          ) {
-            return { ...mapped, name: currentUser.firstName };
-          }
+      const mappedMembers = data.members.map((member) => {
+        const mapped = mapTripMember(member);
+        if (
+          currentUser &&
+          String(mapped.id) === String(currentUser.id) &&
+          (mapped.name === "User" || mapped.name === "Unknown")
+        ) {
+          return { ...mapped, name: currentUser.firstName };
+        }
 
-          return mapped;
-        }),
+        return mapped;
+      });
+
+      const linkedMap: Record<string, string | null> = {};
+      mappedMembers.forEach((member) => {
+        linkedMap[String(member.id)] = member.linkedTo ? String(member.linkedTo) : null;
+      });
+
+      set({
+        currentTripMembers: mappedMembers,
+        activeTripLinkedMap: linkedMap,
         loading: false,
         error: null,
       });

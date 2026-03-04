@@ -40,8 +40,8 @@ def get_active_trip_id(user_id):
 def set_user_active_trip(user_id, trip_id):
     db.set_user_active_trip(user_id, trip_id)
 
-def link_users(child_id, parent_id):
-    db.link_users(child_id, parent_id)
+def link_users(trip_id, child_id, parent_id):
+    db.link_users(trip_id, child_id, parent_id)
     return True
 
 def get_user_menu_id(user_id):
@@ -51,8 +51,8 @@ def get_user_menu_id(user_id):
 def set_user_menu_id(user_id, msg_id):
     db.set_user_menu_id(user_id, msg_id)
     
-def get_linked_names(master_id, filter_ids=None):
-    return db.get_linked_names(master_id, filter_ids=filter_ids)
+def get_linked_names(trip_id, master_id, filter_ids=None):
+    return db.get_linked_names(trip_id, master_id, filter_ids=filter_ids)
 
 def get_all_users_as_dict():
     return db.get_all_users_as_dict()
@@ -72,8 +72,11 @@ def get_trip(trip_id):
 def get_trip_by_code(code):
     return db.get_trip_by_code(code)
 
-def add_member_to_trip(trip_id, user_id):
-    db.add_member_to_trip(trip_id, user_id)
+def add_member_to_trip(trip_id, user_id, linked_to=None):
+    db.add_member_to_trip(trip_id, user_id, linked_to=linked_to)
+
+def get_trip_members_links(trip_id):
+    return db.get_trip_members_links(trip_id)
 
 def get_user_trips(user_id):
     return db.get_user_trips(user_id)

@@ -20,6 +20,8 @@ function JoinTripRoleScreen({
   const [preview, setPreview] = useState<JoinTripPreview | null>(null);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>("");
   const [linkRequested, setLinkRequested] = useState(false);
+  const [pollExpired, setPollExpired] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
 
   const loading = useStore((state) => state.loading);
   const error = useStore((state) => state.error);
@@ -28,6 +30,9 @@ function JoinTripRoleScreen({
   const joinTrip = useStore((state) => state.joinTrip);
   const fetchJoinTripPreview = useStore((state) => state.fetchJoinTripPreview);
   const requestPartnerLink = useStore((state) => state.requestPartnerLink);
+  const fetchUserStatus = useStore((state) => state.fetchUserStatus);
+  const currentTripMembers = useStore((state) => state.currentTripMembers);
+  const fetchTripMembers = useStore((state) => state.fetchTripMembers);
 
   useEffect(() => {
     let active = true;
@@ -46,14 +51,73 @@ function JoinTripRoleScreen({
     };
   }, [code, fetchJoinTripPreview]);
 
+  useEffect(() => {
+    if (!preview?.tripId) {
+      return;
+    }
+
+    void fetchTripMembers(preview.tripId);
+  }, [preview?.tripId, fetchTripMembers]);
+
+  useEffect(() => {
+    if (!linkRequested || pollExpired || !user?.id) {
+      return;
+    }
+
+    let active = true;
+    const startedAt = Date.now();
+
+    const checkStatus = async () => {
+      const status = await fetchUserStatus(String(user.id));
+      if (!active) {
+        return;
+      }
+
+      const activeTripId = status?.activeTripId ? String(status.activeTripId) : null;
+      const isExpectedTrip =
+        !preview?.tripId || (activeTripId && String(preview.tripId) === String(activeTripId));
+
+      if (activeTripId && isExpectedTrip) {
+        active = false;
+        onJoined(activeTripId);
+        return;
+      }
+
+      if (Date.now() - startedAt >= 60_000) {
+        active = false;
+        setPollExpired(true);
+      }
+    };
+
+    void checkStatus();
+    const intervalId = window.setInterval(() => {
+      void checkStatus();
+    }, 2500);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [linkRequested, pollExpired, pollAttempt, user?.id, preview?.tripId, fetchUserStatus, onJoined]);
+
   const participants = useMemo(() => {
+    if (currentTripMembers.length > 0) {
+      return currentTripMembers
+        .filter((member) => !member.linkedTo)
+        .filter((member) => String(member.id) !== String(user?.id))
+        .map((member) => ({
+          id: String(member.id),
+          name: member.name,
+        }));
+    }
+
     const list = preview?.participants ?? [];
     if (!user?.id) {
       return list;
     }
 
     return list.filter((member) => String(member.id) !== String(user.id));
-  }, [preview, user?.id]);
+  }, [currentTripMembers, preview?.participants, user?.id]);
 
   const handleJoinAsIndependent = async () => {
     const tripId = await joinTrip(code);
@@ -77,12 +141,30 @@ function JoinTripRoleScreen({
       return;
     }
 
-    const ok = await requestPartnerLink(code, selectedPartnerId);
+    if (!preview?.tripId) {
+      alert("Не удалось определить поездку. Повторите попытку.");
+      return;
+    }
+
+    const ok = await requestPartnerLink(preview.tripId, code, selectedPartnerId);
     if (ok) {
       setLinkRequested(true);
+      setPollExpired(false);
+      setPollAttempt((value) => value + 1);
     } else {
       alert("Не удалось отправить запрос на привязку");
     }
+  };
+
+  const handleRetry = () => {
+    setPollExpired(false);
+    setLinkRequested(true);
+    setPollAttempt((value) => value + 1);
+  };
+
+  const handleCancelWaiting = () => {
+    setLinkRequested(false);
+    setPollExpired(false);
   };
 
   return (
@@ -103,7 +185,7 @@ function JoinTripRoleScreen({
 
           <Card className="space-y-3 p-5">
             <h2 className="text-base font-semibold text-textMain">Как вы хотите участвовать?</h2>
-            <Button disabled={loading} fullWidth onClick={handleJoinAsIndependent}>
+            <Button disabled={loading || linkRequested} fullWidth onClick={handleJoinAsIndependent}>
               👤 Я самостоятельный участник
             </Button>
             <p className="text-xs text-textMuted">
@@ -127,6 +209,7 @@ function JoinTripRoleScreen({
                   >
                     <input
                       checked={selectedPartnerId === String(member.id)}
+                      disabled={linkRequested}
                       id={`partner-${member.id}`}
                       onChange={() => setSelectedPartnerId(String(member.id))}
                       type="radio"
@@ -142,7 +225,12 @@ function JoinTripRoleScreen({
             )}
 
             <Button
-              disabled={loading || participants.length === 0}
+              disabled={
+                loading ||
+                participants.length === 0 ||
+                linkRequested ||
+                !preview?.tripId
+              }
               fullWidth
               onClick={handleRequestPartnerLink}
               variant="secondary"
@@ -151,7 +239,19 @@ function JoinTripRoleScreen({
             </Button>
 
             {linkRequested ? (
-              <p className="text-sm font-medium text-primary">Ожидание подтверждения...</p>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-primary">Ожидание подтверждения...</p>
+                {pollExpired ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button className="flex-1" onClick={handleRetry} variant="secondary">
+                      Попробовать снова
+                    </Button>
+                    <Button className="flex-1" onClick={handleCancelWaiting} variant="ghost">
+                      Отмена
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </Card>
 

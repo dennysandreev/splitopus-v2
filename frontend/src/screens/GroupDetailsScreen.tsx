@@ -66,6 +66,27 @@ function GroupDetailsScreen({
     return expenses.filter((expense) => String(expense.payerId) === String(filterUser));
   }, [expenses, filterUser]);
 
+  const linkedGroups = useMemo(() => {
+    const buckets = new Map<string, string[]>();
+
+    currentTripMembers.forEach((member) => {
+      const key = member.linkedTo ? String(member.linkedTo) : String(member.id);
+      const list = buckets.get(key) ?? [];
+      list.push(member.name);
+      buckets.set(key, list);
+    });
+
+    return Array.from(buckets.entries())
+      .map(([masterId, names]) => {
+        const masterName =
+          currentTripMembers.find((member) => String(member.id) === masterId)?.name ??
+          names[0];
+        const uniqNames = Array.from(new Set([masterName, ...names]));
+        return uniqNames;
+      })
+      .filter((names) => names.length > 1);
+  }, [currentTripMembers]);
+
   const handleShare = () => {
     if (!trip?.code || !trip?.name) {
       return;
@@ -209,6 +230,19 @@ function GroupDetailsScreen({
             </button>
           ))}
         </div>
+
+        {linkedGroups.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {linkedGroups.map((names, index) => (
+              <span
+                className="rounded-full border border-borderSoft bg-white px-3 py-1 text-xs text-textMuted"
+                key={`${names.join("-")}-${index}`}
+              >
+                {names.join(" + ")}
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         <div className="mt-4 space-y-3">
           <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-textMuted">
