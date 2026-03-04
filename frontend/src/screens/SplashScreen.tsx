@@ -1,3 +1,5 @@
+import logoMark from "../assets/brand/logo-mark.svg";
+
 interface SplashScreenProps {
   onOpenSettings: () => void;
 }
@@ -15,7 +17,7 @@ function SplashScreen({ onOpenSettings }: SplashScreenProps) {
         </button>
       </div>
       <div className="premium-card w-full max-w-sm p-8 text-center">
-        <div className="mx-auto h-14 w-14 rounded-2xl bg-hero-tint" />
+        <img alt="Splitopus" className="mx-auto h-16 w-16 rounded-2xl shadow-soft" src={logoMark} />
         <h1 className="mt-4 text-2xl font-semibold text-textMain">Splitopus</h1>
         <p className="mt-2 text-sm text-textMuted">Умный учет расходов в Telegram</p>
       </div>

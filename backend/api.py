@@ -50,6 +50,76 @@ class TripCreate(BaseModel):
     currency: str
     creator_id: str
 
+@app.get("/api/trips/by-code/{code}")
+def get_trip_by_code(code: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, name, code, currency FROM trips WHERE UPPER(code) = ?", (code.upper(),))
+        trip_row = cursor.fetchone()
+        if not trip_row:
+            raise HTTPException(status_code=404, detail="Trip not found")
+        
+        trip = dict(trip_row)
+        
+        cursor.execute("SELECT u.id, u.name FROM users u JOIN trip_members tm ON u.id = tm.user_id WHERE tm.trip_id = ?", (trip['id'],))
+        members = [dict(row) for row in cursor.fetchall()]
+        
+        trip['members'] = members
+        
+        return {"trip": trip}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error fetching trip by code: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+class PartnerLinkRequest(BaseModel):
+    code: str
+    user_id: str
+    partner_id: str
+
+@app.post("/api/trips/link-request")
+def request_partner_link(req: PartnerLinkRequest):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, name FROM trips WHERE UPPER(code) = ?", (req.code.upper(),))
+        trip_row = cursor.fetchone()
+        if not trip_row:
+            raise HTTPException(status_code=404, detail="Trip not found")
+        
+        trip_id = trip_row['id']
+        trip_name = trip_row['name']
+        
+        cursor.execute("SELECT name FROM users WHERE id = ?", (req.user_id,))
+        requester_row = cursor.fetchone()
+        requester_name = requester_row['name'] if requester_row else "Пользователь Telegram"
+        
+        msg = (
+            f"🔔 *Запрос на привязку*\n"
+            f"Пользователь *{requester_name}* хочет присоединиться к вашему счету в поездке *{trip_name}*.\n"
+            "Если вы примете, вы будете платить за двоих."
+        )
+        keyboard = {"inline_keyboard": [
+            [{"text": "✅ Принять", "callback_data": f"APPROVE_LINK|{req.user_id}|{trip_id}"}],
+            [{"text": "❌ Отклонить", "callback_data": f"REJECT_LINK|{req.user_id}"}]
+        ]}
+        
+        send_telegram_msg(req.partner_id, msg, reply_markup=keyboard)
+        
+        return {"status": "success", "message": "Link request sent"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error requesting partner link: {e}")
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
 class JoinTripRequest(BaseModel):
     code: str
     user_id: str
@@ -64,12 +134,14 @@ def generate_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 # --- Notification Logic ---
-def send_telegram_msg(chat_id, text):
+def send_telegram_msg(chat_id, text, reply_markup=None):
     token = os.getenv('BOT_TOKEN')
     if not token: return
     try:
         url = f'https://api.telegram.org/bot{token}/sendMessage'
-        requests.post(url, json={'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'})
+        payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}
+        if reply_markup: payload['reply_markup'] = json.dumps(reply_markup)
+        requests.post(url, json=payload)
     except Exception as e:
         logger.error(f'Failed to send TG message: {e}')
 
@@ -103,6 +175,24 @@ def notify_new_expense(trip_id, payer_id, amount, desc, category="OTHER", split=
                  if mid != payer_master:
                      send_telegram_msg(mid, msg)
              return
+
+        # Custom notification for REPAYMENT category
+        if category == "REPAYMENT":
+            # Assuming split will contain one entry: recipient_id -> amount
+            recipient_id = list(split.keys())[0] if split else None
+            if recipient_id:
+                cursor.execute("SELECT name FROM users WHERE id = ?", (recipient_id,))
+                recipient_row = cursor.fetchone()
+                recipient_name = recipient_row['name'] if recipient_row else 'User'
+
+                # Message to payer (who returned the debt)
+                msg_payer = f"✅ Вы вернули *{amount:,.0f} {curr}* пользователю *{recipient_name}*."
+                send_telegram_msg(payer_id, msg_payer)
+
+                # Message to recipient (who received the debt)
+                msg_recipient = f"💸 *{payer_name}* вернул вам долг: *{amount:,.0f} {curr}*."
+                send_telegram_msg(recipient_id, msg_recipient)
+            return
 
         for mid in masters:
             if mid != payer_master:
@@ -234,6 +324,131 @@ def join_trip(req: JoinTripRequest):
     finally:
         conn.close()
 
+@app.post("/api/trips/{trip_id}/leave")
+def leave_trip(trip_id: str, request: Dict[str, str] = Body(...)):
+    user_id = request.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Missing user_id")
+        
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Check if user is in trip
+        cursor.execute("SELECT user_id FROM trip_members WHERE trip_id = ? AND user_id = ?", (trip_id, user_id))
+        member = cursor.fetchone()
+        if not member:
+            raise HTTPException(status_code=404, detail="User not in trip")
+            
+        # Check balance (must be 0)
+        # We need to calculate balance. Reusing logic from get_trip_debts is best but expensive.
+        # Let's verify via existing endpoints logic or duplicate minimal check.
+        # Actually, let's allow leaving if balance is SMALL (e.g. < 1 unit) to avoid float issues, 
+        # OR strictly 0. Let's try strictly 0 first.
+        
+        # We need member list and expenses to calc balance
+        cursor.execute("SELECT u.id, u.linked_to FROM users u JOIN trip_members tm ON u.id = tm.user_id WHERE tm.trip_id = ?", (trip_id,))
+        members_rows = cursor.fetchall()
+        link_map = {row['id']: row['linked_to'] for row in members_rows if row['linked_to']}
+        
+        cursor.execute("SELECT payer_id, amount, category, split_json FROM expenses WHERE trip_id = ?", (trip_id,))
+        expenses_rows = cursor.fetchall()
+        expenses = []
+        for row in expenses_rows:
+            exp = dict(row)
+            try:
+                exp["split"] = json.loads(row["split_json"]) if row["split_json"] else {}
+            except:
+                exp["split"] = {}
+            expenses.append(exp)
+            
+        trip_data = {'members': [m['id'] for m in members_rows], 'expenses': expenses}
+        balances, _, _ = logic.calculate_balance(trip_data, link_map=link_map)
+        
+        user_balance = balances.get(user_id, 0)
+        # Check if master or linked account
+        master_id = logic.get_master(user_id, link_map)
+        master_balance = balances.get(master_id, 0)
+        
+        # If user is linked, their personal balance might be irrelevant if master holds the debt?
+        # logic.calculate_balance aggregates to masters. 
+        # If I am a child, my balance is effectively my master's balance? 
+        # No, if I leave, I disappear from the group.
+        # If I am a child, I should probably unlink first? Or leaving just removes me.
+        # If I leave, expenses paid by me (if any) or splits on me might hang?
+        # Actually, expenses are stored by payer_id. If payer leaves, history remains.
+        # But if I have a non-zero balance, it means I owe someone or someone owes me.
+        
+        if abs(master_balance) > 1.0: # Tolerance 1.0
+             raise HTTPException(status_code=400, detail=f"Cannot leave: Balance is not zero ({master_balance:.0f}). Settle debts first.")
+
+        # Delete member
+        cursor.execute("DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?", (trip_id, user_id))
+        conn.commit()
+        return {"status": "success", "message": "Left trip"}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error leaving trip: {e}")
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.delete("/api/trips/{trip_id}")
+def delete_trip(trip_id: str, user_id: str): # user_id as query param
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Check creator
+        cursor.execute("SELECT creator_id FROM trips WHERE id = ?", (trip_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Trip not found")
+            
+        if row['creator_id'] != user_id:
+             raise HTTPException(status_code=403, detail="Only creator can delete trip")
+             
+        # Cascading delete
+        cursor.execute("DELETE FROM expenses WHERE trip_id = ?", (trip_id,))
+        cursor.execute("DELETE FROM notes WHERE trip_id = ?", (trip_id,))
+        cursor.execute("DELETE FROM trip_members WHERE trip_id = ?", (trip_id,))
+        cursor.execute("DELETE FROM trips WHERE id = ?", (trip_id,))
+        
+        conn.commit()
+        return {"status": "success", "message": "Trip deleted"}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error deleting trip: {e}")
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/users/{user_id}/status")
+def get_user_status(user_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT active_trip_id, linked_to FROM users WHERE id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        return {
+            "active_trip_id": row['active_trip_id'], 
+            "linked_to": row['linked_to']
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        logger.error(f"Error fetching user status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
 @app.get("/api/expenses/{trip_id}")
 def get_trip_expenses(trip_id: str):
     conn = get_db()
@@ -270,6 +485,9 @@ def create_expense(expense: ExpenseCreate):
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Force category uppercase just in case
+        expense.category = expense.category.upper()
+        
         split_json = json.dumps(expense.split)
         created_at = int(datetime.now().timestamp())
         

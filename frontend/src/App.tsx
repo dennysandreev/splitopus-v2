@@ -7,7 +7,9 @@ import ExpenseDetailsScreen from "./screens/ExpenseDetailsScreen";
 import GroupDetailsScreen from "./screens/GroupDetailsScreen";
 import GroupsScreen from "./screens/GroupsScreen";
 import JoinTripScreen from "./screens/JoinTripScreen";
+import JoinTripRoleScreen from "./screens/JoinTripRoleScreen";
 import NotesScreen from "./screens/NotesScreen";
+import RepayDebtScreen from "./screens/RepayDebtScreen";
 import RouletteScreen from "./screens/RouletteScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import SplashScreen from "./screens/SplashScreen";
@@ -20,10 +22,12 @@ type ScreenName =
   | "addExpense"
   | "debts"
   | "expenseDetails"
+  | "repayDebt"
   | "stats"
   | "notes"
   | "roulette"
   | "joinTrip"
+  | "joinTripRole"
   | "settings";
 
 function App() {
@@ -33,6 +37,7 @@ function App() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [joinCode, setJoinCode] = useState<string | null>(null);
 
   const groups = useStore((state) => state.groups);
   const fetchTrips = useStore((state) => state.fetchTrips);
@@ -45,6 +50,14 @@ function App() {
     setAuthInitialized(true);
     WebApp.ready();
     WebApp.expand();
+
+    const startParam = WebApp.initDataUnsafe?.start_param?.trim();
+    if (startParam) {
+      const normalizedCode = startParam.toUpperCase();
+      setJoinCode(normalizedCode);
+      setLastScreen("groups");
+      setScreen("joinTripRole");
+    }
 
     const splashTimer = window.setTimeout(() => {
       setIsSplashVisible(false);
@@ -97,6 +110,11 @@ function App() {
       {screen === "groupDetails" && selectedGroupId ? (
         <GroupDetailsScreen
           onBack={() => navigate("groups")}
+          onGoGroups={() => {
+            setSelectedGroupId(null);
+            setScreen("groups");
+            setLastScreen("groups");
+          }}
           onOpenAddExpense={() => navigate("addExpense")}
           onOpenDebts={() => navigate("debts")}
           onOpenExpense={(expenseId) => {
@@ -122,6 +140,15 @@ function App() {
       {screen === "debts" && selectedGroupId ? (
         <DebtsScreen
           onBack={() => navigate("groupDetails")}
+          onOpenRepayDebt={() => navigate("repayDebt")}
+          onOpenSettings={openSettings}
+          tripId={selectedGroupId}
+        />
+      ) : null}
+
+      {screen === "repayDebt" && selectedGroupId ? (
+        <RepayDebtScreen
+          onBack={() => navigate("debts")}
           onOpenSettings={openSettings}
           tripId={selectedGroupId}
         />
@@ -162,6 +189,18 @@ function App() {
       {screen === "joinTrip" ? (
         <JoinTripScreen
           onBack={() => navigate("groups")}
+          onContinue={(code) => {
+            setJoinCode(code);
+            navigate("joinTripRole");
+          }}
+          onOpenSettings={openSettings}
+        />
+      ) : null}
+
+      {screen === "joinTripRole" && joinCode ? (
+        <JoinTripRoleScreen
+          code={joinCode}
+          onBack={() => navigate("joinTrip")}
           onJoined={(tripId) => {
             setSelectedGroupId(tripId);
             navigate("groupDetails");
