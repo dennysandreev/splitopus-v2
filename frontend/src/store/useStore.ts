@@ -116,6 +116,7 @@ export interface Trip {
   code: string;
   currency: string;
   rate: number;
+  creatorId: string;
   members: string[];
   createdAt?: string;
   participantsCount?: number;
@@ -125,6 +126,18 @@ export interface TripMember {
   id: string;
   name: string;
   linkedTo?: string | null;
+}
+
+export interface JoinTripParticipant {
+  id: string;
+  name: string;
+}
+
+export interface JoinTripPreview {
+  code: string;
+  name?: string;
+  tripId?: string;
+  participants: JoinTripParticipant[];
 }
 
 interface TripDto {
@@ -177,6 +190,10 @@ interface StoreState {
   fetchTrips: () => Promise<void>;
   createTrip: (name: string, currency: string) => Promise<boolean>;
   joinTrip: (code: string) => Promise<string | null>;
+  fetchJoinTripPreview: (code: string) => Promise<JoinTripPreview | null>;
+  requestPartnerLink: (code: string, partnerId: string) => Promise<boolean>;
+  leaveTrip: (tripId: string) => Promise<void>;
+  deleteTrip: (tripId: string) => Promise<void>;
   fetchTripMembers: (tripId: string) => Promise<void>;
 }
 
@@ -187,6 +204,7 @@ function mapTrip(dto: TripDto): Trip {
     code: dto.code,
     currency: dto.currency,
     rate: dto.rate ?? 0,
+    creatorId: String(dto.creator_id),
     members: dto.members ?? [],
     createdAt: dto.created_at,
     participantsCount: dto.participants_count,
@@ -412,7 +430,7 @@ export const useStore = create<StoreState>((set, get) => ({
         rawData?.trip_id ??
         rawData?.tripId ??
         rawData?.id ??
-        (rawData?.trip ? mapTrip(rawData.trip).id : undefined) ??
+        (rawData?.trip?.id ? String(rawData.trip.id) : undefined) ??
         get().groups.find((trip) => trip.code.toUpperCase() === normalizedCode.toUpperCase())?.id;
 
       set({
@@ -428,6 +446,203 @@ export const useStore = create<StoreState>((set, get) => ({
         error: error instanceof Error ? error.message : "Unknown error",
       });
       return null;
+    }
+  },
+
+  fetchJoinTripPreview: async (code) => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!normalizedCode) {
+      return null;
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      // TODO(backend): confirm final endpoint contract for trip lookup by invite code.
+      const response = await fetch(
+        `${API_BASE_URL}/api/trips/by-code/${encodeURIComponent(normalizedCode)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch join preview: ${response.status}`);
+      }
+
+      const data = (await response.json()) as
+        | {
+            trip?: {
+              id?: string;
+              name?: string;
+              code?: string;
+              members?: Array<{ id?: string; user_id?: string; name?: string }>;
+              participants?: Array<{ id?: string; user_id?: string; name?: string }>;
+            };
+          }
+        | undefined;
+
+      const trip = data?.trip;
+      const rawParticipants = trip?.members ?? trip?.participants ?? [];
+
+      const preview: JoinTripPreview = {
+        code: trip?.code ?? normalizedCode,
+        name: trip?.name,
+        tripId: trip?.id ? String(trip.id) : undefined,
+        participants: rawParticipants.map((member, index) => ({
+          id: String(member.id ?? member.user_id ?? index),
+          name: member.name ?? "Участник",
+        })),
+      };
+
+      set({ loading: false, error: null });
+      return preview;
+    } catch {
+      const fallbackTrip = get().groups.find(
+        (trip) => trip.code.toUpperCase() === normalizedCode,
+      );
+
+      const fallbackPreview: JoinTripPreview | null = fallbackTrip
+        ? {
+            code: fallbackTrip.code,
+            name: fallbackTrip.name,
+            tripId: fallbackTrip.id,
+            participants: fallbackTrip.members.map((name, index) => ({
+              id: `${fallbackTrip.id}-${index}`,
+              name,
+            })),
+          }
+        : {
+            code: normalizedCode,
+            participants: [],
+          };
+
+      set({ loading: false, error: null });
+      return fallbackPreview;
+    }
+  },
+
+  requestPartnerLink: async (code, partnerId) => {
+    const { user } = get();
+    if (!user?.id) {
+      set({ error: "Пользователь не авторизован" });
+      return false;
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      // TODO(backend): confirm final endpoint contract for partner linking flow.
+      const response = await fetch(`${API_BASE_URL}/api/trips/link-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: code.trim().toUpperCase(),
+          user_id: String(user.id),
+          partner_id: String(partnerId),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to request partner link: ${response.status}`);
+      }
+
+      set({ loading: false, error: null });
+      return true;
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      return false;
+    }
+  },
+
+  leaveTrip: async (tripId) => {
+    const { user } = get();
+    if (!user?.id) {
+      set({ error: "Пользователь не авторизован" });
+      throw new Error("NOT_AUTHORIZED");
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}/leave`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: String(user.id),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 400) {
+          set({ loading: false, error: errorText || "Balance is not zero" });
+          throw new Error("BALANCE_NOT_ZERO");
+        }
+        set({ loading: false, error: errorText || `Failed to leave trip: ${response.status}` });
+        throw new Error(errorText || `Failed to leave trip: ${response.status}`);
+      }
+
+      await get().fetchTrips();
+      set({
+        loading: false,
+        error: null,
+        currentTripId: get().currentTripId === tripId ? null : get().currentTripId,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "BALANCE_NOT_ZERO") {
+        throw error;
+      }
+
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error instanceof Error ? error : new Error("Unknown error");
+    }
+  },
+
+  deleteTrip: async (tripId) => {
+    const { user } = get();
+    if (!user?.id) {
+      set({ error: "Пользователь не авторизован" });
+      throw new Error("NOT_AUTHORIZED");
+    }
+
+    set({ loading: true, error: null });
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}?user_id=${encodeURIComponent(String(user.id))}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to delete trip: ${response.status}`);
+      }
+
+      await get().fetchTrips();
+      set({
+        loading: false,
+        error: null,
+        currentTripId: get().currentTripId === tripId ? null : get().currentTripId,
+      });
+    } catch (error) {
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error instanceof Error ? error : new Error("Unknown error");
     }
   },
 

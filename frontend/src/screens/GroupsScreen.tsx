@@ -102,7 +102,7 @@ function GroupsScreen({ onSelectGroup, onOpenSettings, onOpenJoinTrip }: GroupsS
                 </p>
                 {group.members.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {group.members.slice(0, 5).map((member) => (
+                    {group.members.map((member) => (
                       <span
                         className="rounded-full border border-borderSoft bg-slate-50 px-2 py-0.5 text-[11px] text-textMuted"
                         key={member}
@@ -110,11 +110,6 @@ function GroupsScreen({ onSelectGroup, onOpenSettings, onOpenJoinTrip }: GroupsS
                         {member}
                       </span>
                     ))}
-                    {group.members.length > 5 ? (
-                      <span className="rounded-full border border-borderSoft bg-slate-50 px-2 py-0.5 text-[11px] text-textMuted">
-                        +{group.members.length - 5}
-                      </span>
-                    ) : null}
                   </div>
                 ) : null}
               </Card>

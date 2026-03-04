@@ -1,4 +1,5 @@
 import { hapticLight } from "../utils/haptics";
+import logoMark from "../assets/brand/logo-mark.svg";
 
 interface NavbarProps {
   title: string;
@@ -7,6 +8,8 @@ interface NavbarProps {
 }
 
 function Navbar({ title, onBack, onSettings }: NavbarProps) {
+  const showLogo = title === "Splitopus";
+
   return (
     <header className="flex items-center justify-between px-4 py-3">
       <div className="flex w-10 items-center justify-start">
@@ -24,7 +27,12 @@ function Navbar({ title, onBack, onSettings }: NavbarProps) {
           </button>
         ) : null}
       </div>
-      <h1 className="truncate px-2 text-base font-semibold text-textMain">{title}</h1>
+      <h1 className="inline-flex items-center gap-2 truncate px-2 text-base font-semibold text-textMain">
+        {showLogo ? (
+          <img alt="Splitopus" className="h-6 w-6 rounded-lg" src={logoMark} />
+        ) : null}
+        <span className="truncate">{title}</span>
+      </h1>
       <div className="flex w-10 items-center justify-end">
         {onSettings ? (
           <button

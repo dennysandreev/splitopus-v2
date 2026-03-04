@@ -11,6 +11,7 @@ import { getMemberName } from "../utils/members";
 interface GroupDetailsScreenProps {
   tripId: string;
   onBack: () => void;
+  onGoGroups: () => void;
   onOpenDebts: () => void;
   onOpenStats: () => void;
   onOpenNotes: () => void;
@@ -23,6 +24,7 @@ interface GroupDetailsScreenProps {
 function GroupDetailsScreen({
   tripId,
   onBack,
+  onGoGroups,
   onOpenDebts,
   onOpenStats,
   onOpenNotes,
@@ -41,6 +43,8 @@ function GroupDetailsScreen({
   const fetchExpenses = useStore((state) => state.fetchExpenses);
   const fetchDebts = useStore((state) => state.fetchDebts);
   const fetchTripMembers = useStore((state) => state.fetchTripMembers);
+  const leaveTrip = useStore((state) => state.leaveTrip);
+  const deleteTrip = useStore((state) => state.deleteTrip);
 
   useEffect(() => {
     void fetchExpenses(tripId);
@@ -52,6 +56,7 @@ function GroupDetailsScreen({
   const currency = trip?.currency ?? "THB";
   const myBalance = user ? balances?.[String(user.id)] || 0 : 0;
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const isCreator = Boolean(trip && user && String(trip.creatorId) === String(user.id));
 
   const filteredExpenses = useMemo(() => {
     if (!filterUser) {
@@ -73,6 +78,46 @@ function GroupDetailsScreen({
     );
     const shareUrl = encodeURIComponent(botStartLink);
     WebApp.openTelegramLink(`https://t.me/share/url?url=${shareUrl}&text=${shareText}`);
+  };
+
+  const handleTripAction = async () => {
+    if (!trip) {
+      return;
+    }
+
+    if (isCreator) {
+      const confirmed = window.confirm(
+        "Вы точно хотите удалить поездку? Это действие нельзя отменить.",
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await deleteTrip(trip.id);
+        onGoGroups();
+      } catch {
+        alert("Не удалось удалить поездку.");
+      }
+      return;
+    }
+
+    const confirmed = window.confirm("Выйти из поездки?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await leaveTrip(trip.id);
+      onGoGroups();
+    } catch (error) {
+      if (error instanceof Error && error.message === "BALANCE_NOT_ZERO") {
+        alert("Сначала рассчитайтесь с долгами! Ваш баланс должен быть 0.");
+        return;
+      }
+
+      alert("Не удалось покинуть поездку.");
+    }
   };
 
   return (
@@ -111,13 +156,21 @@ function GroupDetailsScreen({
               </Button>
             </div>
 
-            <div className="mt-4 flex justify-center">
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
               <button
-                className="rounded-full border border-borderSoft bg-slate-50 px-4 py-2 text-xs font-medium text-textMuted transition hover:bg-slate-100"
+                className="min-w-[132px] rounded-full border border-primary bg-primary/5 px-4 py-2 text-xs font-medium text-primary transition hover:bg-primary/10"
                 onClick={handleShare}
                 type="button"
               >
                 🔗 Поделиться
+              </button>
+              <button
+                className="min-w-[164px] rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                disabled={loading}
+                onClick={() => void handleTripAction()}
+                type="button"
+              >
+                {isCreator ? "🗑 Удалить поездку" : "🚪 Покинуть поездку"}
               </button>
             </div>
           </div>

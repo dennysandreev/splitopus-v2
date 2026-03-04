@@ -6,6 +6,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   FUN: "🎉 Развлечения",
   HOME: "🏠 Жилье",
   OTHER: "📦 Другое",
+  REPAYMENT: "💸 Возврат долга",
 };
 
 export function formatMoney(value: number): string {

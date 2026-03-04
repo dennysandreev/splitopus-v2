@@ -10,9 +10,10 @@ interface DebtsScreenProps {
   tripId: string;
   onBack: () => void;
   onOpenSettings: () => void;
+  onOpenRepayDebt: () => void;
 }
 
-function DebtsScreen({ tripId, onBack, onOpenSettings }: DebtsScreenProps) {
+function DebtsScreen({ tripId, onBack, onOpenSettings, onOpenRepayDebt }: DebtsScreenProps) {
   const debts = useStore((state) => state.debts);
   const balances = useStore((state) => state.balances);
   const groups = useStore((state) => state.groups);
@@ -97,6 +98,10 @@ function DebtsScreen({ tripId, onBack, onOpenSettings }: DebtsScreenProps) {
 
           {loading ? <p className="text-sm text-textMuted">Загрузка...</p> : null}
           {error ? <p className="text-sm text-danger">{error}</p> : null}
+
+          <Button className="w-full py-3 text-base" onClick={onOpenRepayDebt}>
+            💸 Вернуть долг
+          </Button>
         </div>
       </main>
     </div>
